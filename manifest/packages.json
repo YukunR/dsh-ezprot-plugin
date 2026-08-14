@@ -1,0 +1,50 @@
+{
+  "comment": "Required R packages for the ezprot pipeline. R version pinned to 4.4.0, Bioconductor 3.20. The runtime installs only MISSING packages into the plugin-managed library; never reinstalls what is present. Installer mirrors are configurable (default: Westlake University mirrors).",
+  "rVersion": "4.4.0",
+  "biocVersion": "3.20",
+  "cran": [
+    "tidyverse",
+    "ggplot2",
+    "pheatmap",
+    "cowplot",
+    "ggforce",
+    "gghalves",
+    "ggdist",
+    "ggrepel",
+    "patchwork",
+    "viridis",
+    "corrplot",
+    "ggdendro",
+    "RColorBrewer",
+    "scales",
+    "stringr",
+    "stringi",
+    "magrittr",
+    "broom",
+    "car",
+    "progress",
+    "jsonlite",
+    "digest",
+    "reshape2",
+    "multiUS",
+    "data.table",
+    "optparse",
+    "BiocManager"
+  ],
+  "bioc": [
+    "PCAtools",
+    "sva",
+    "clusterProfiler",
+    "enrichplot",
+    "DOSE",
+    "fgsea",
+    "qvalue",
+    "GO.db",
+    "AnnotationDbi"
+  ],
+  "backgroundBuildOnly": {
+    "comment": "Only needed when building annotation backgrounds for a NEW organism; enrichment/GSEA at runtime use local files and never touch the network.",
+    "bioc": ["GO.db", "AnnotationDbi"],
+    "cran": ["optparse"]
+  }
+}

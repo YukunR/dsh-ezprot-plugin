@@ -1,0 +1,14 @@
+# ezprot-dsh-plugin bundle layer.
+# Applied when a profile lists this bundle (dsh plugin add appends it to
+# dsh.profile.bundles automatically). Ships only defaults most users keep.
+# Machine-specific values (e.g. a prebuilt library path) belong in the
+# profile's own cordis.patch.yml as an id-targeted override, or in
+# $DSH_HOME/cordis.patch.yml for machine-local preferences.
+- insert:
+    - id: ezprot
+      name: 'ezprot-dsh-plugin'
+      config:
+        enableInstall: true
+        backend: auto
+        dockerImage: 'ezprot:latest'
+        defaultTimeoutMs: 1800000
