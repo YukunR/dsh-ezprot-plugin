@@ -87,7 +87,10 @@ const textOutput = {
   },
 }
 
-/** Canonical value carries text + durable image refs; render emits image blocks. */
+/** Canonical value carries text + durable image refs. The MODEL-facing render
+ *  is strictly text-only (the DeepSeek adapter rejects image blocks with a
+ *  provider error); the image refs travel through presentationMeta, a
+ *  tool-private channel a future UI can render. Humans open the PNG paths. */
 const stepOutput = {
   schema: {
     type: 'object',
@@ -98,21 +101,19 @@ const stepOutput = {
     },
   },
   render(_args: unknown, value: { text: string; images: ImageRefLike[] }) {
-    const blocks: Array<Record<string, unknown>> = [{ type: 'text', text: String(value?.text ?? '') }]
-    for (const im of value?.images ?? []) {
-      blocks.push({
-        type: 'image',
-        attachment: {
-          attachmentId: im.attachmentId,
-          mediaType: im.mediaType,
-          bytes: im.bytes,
-          width: im.width,
-          height: im.height,
-          ...(im.name ? { name: im.name } : {}),
-        },
-      })
-    }
-    return blocks as never
+    return [{ type: 'text' as const, text: String(value?.text ?? '') }]
+  },
+  presentationMeta(_args: unknown, value: { text: string; images: ImageRefLike[] }) {
+    // plain JSON projection of the durable image refs (tool-private channel)
+    const images = (value?.images ?? []).map((im) => ({
+      attachmentId: im.attachmentId,
+      mediaType: im.mediaType,
+      bytes: im.bytes,
+      width: im.width,
+      height: im.height,
+      ...(im.name ? { name: im.name } : {}),
+    }))
+    return { images } as never
   },
 }
 
@@ -261,9 +262,32 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
     },
 
     {
+      name: 'proteomics_batch',
+      description:
+        'Manage batch assignments for a project AFTER the user has seen the PCA figures and reported batch effects. action=list shows samples/groups/current batches; action=set writes or updates the Batch column in sample_info.txt from a sample→batch mapping (the user may describe batches in natural language or point at a file — the agent converts that into the mapping); action=clear removes the Batch column. After set, run proteomics_step step=batch_remove and then step=pca rerun=true to verify the correction.',
+      parameters: {
+        projectDir: { type: 'string', description: 'Project directory (absolute path).', required: true },
+        action: { type: 'string', enum: ['list', 'set', 'clear'], description: 'Default list.' },
+        mapping: { type: 'object', additionalProperties: true, description: 'Sample → batch label mapping (action=set), e.g. {"NC_1":"1","HC_1":"2"}. Missing samples keep their current value.' },
+      },
+      output: textOutput,
+      execute: async (args: any) => {
+        const log = logCollector()
+        const action = (args.action ?? 'list') as string
+        if (action === 'set') {
+          return guard(service.setBatch(String(args.projectDir), (args.mapping ?? {}) as Record<string, string>), log)
+        }
+        if (action === 'clear') {
+          return guard(service.clearBatch(String(args.projectDir)), log)
+        }
+        return guard(service.batchList(String(args.projectDir)), log)
+      },
+    },
+
+    {
       name: 'proteomics_step',
       description:
-        `Run ONE pipeline step and return its structured summary — call it once per stage so each stage is visible in the trajectory: ${STEPS.join(', ')} (in that order; batch_remove only when the sample metadata has a Batch column). dea, enrich, gsea require completed normalization. Steps are checkpointed: a repeated call without rerun resumes instead of recomputing; rerun=true forces recomputation of that step (dea also invalidates its downstream enrich/gsea outputs). HARD RULE: after the pca step, STOP — show the user the embedded PCA figures, narrate the clustering, and ask (ask_user_question) whether to continue or perform batch removal before running dea.`,
+        `Run ONE pipeline step and return its structured summary — call it once per stage so each stage is visible in the trajectory: ${STEPS.join(', ')} (in that order; batch_remove only after batch assignments exist, see proteomics_batch). dea, enrich, gsea require completed normalization. Steps are checkpointed: a repeated call without rerun resumes instead of recomputing; rerun=true forces recomputation of that step (dea also invalidates its downstream enrich/gsea outputs). HARD RULE: after the pca step, STOP — tell the user where the PCA figures are (the result lists PNG/PDF paths; the chat cannot embed images), narrate the clustering in plain language, and ask (ask_user_question) whether to continue or perform batch removal before running dea.`,
       parameters: {
         projectDir: { type: 'string', description: 'Project directory (absolute path).', required: true },
         step: { type: 'string', enum: [...STEPS], description: 'Which step to run.', required: true },

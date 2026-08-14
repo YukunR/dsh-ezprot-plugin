@@ -45,9 +45,10 @@ const PROMPT_SECTION = [
   '2. proteomics_environment action=status checks the R runtime; action=setup installs R and any missing packages automatically (one-time).',
   '3. proteomics_preflight QCs the tidied matrix + sample metadata and prepares the project. It does NOT set comparisons.',
   '4. HARD RULE — comparisons: after preflight, ASK the user which groups to compare (ask_user_question offering candidate pairs from the inferred groups); never guess. Only after the user confirms, call proteomics_compare with exactly those comparisons.',
-  '5. Steps in order — normalization → pca → (batch_remove only when the user confirmed batch correction) → dea → enrich → gsea — one tool call per step, reading and narrating each summary in plain language.',
-  '6. HARD RULE — PCA gate: after the pca step, STOP. Show the user the embedded PCA figures (biplot, correlation heatmap, dendrogram), narrate the clustering in plain language, and ask (ask_user_question) whether to continue or perform batch removal. Do not run dea before the user answers.',
-  '7. After enrich/gsea, write the biologist-facing report: overview and thresholds, top proteins with verified functions (web_search UniProt/literature — never invent), pathway story, candidate targets ranked for the research goal, suggested experiments.',
+  '5. Steps in order — normalization → pca → (batch_remove only after the user confirmed batch correction) → dea → enrich → gsea — one tool call per step, reading and narrating each summary in plain language.',
+  '6. HARD RULE — PCA gate: after the pca step, STOP. Tell the user where the PCA figures are (the result text lists the PNG/PDF paths — this chat cannot embed images), narrate the clustering in plain language, and ask (ask_user_question) whether to continue or perform batch removal. Do not run dea before the user answers.',
+  '7. Batch injection: batch structure is usually only known AFTER seeing the PCA. When the user reports batch effects, ask them to describe which samples belong to which batch (natural language or a file); record it with proteomics_batch action=set, then run batch_remove and pca rerun=true to verify the correction before continuing.',
+  '8. After enrich/gsea, write the biologist-facing report: overview and thresholds, top proteins with verified functions (web_search UniProt/literature — never invent), pathway story, candidate targets ranked for the research goal, suggested experiments.',
 ].join('\n')
 
 export function apply(ctx: Context, config: Config) {

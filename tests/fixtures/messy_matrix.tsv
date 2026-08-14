@@ -1,5 +1,0 @@
-Majority protein IDs	Gene names	Fasta headers	MW [kDa]	Sequence coverage [%]	Q-value	LFQ intensity NC_1	LFQ intensity NC_2	LFQ intensity NC_3	LFQ intensity HC_1	LFQ intensity HC_2	LFQ intensity HC_3	LFQ intensity HD_1	LFQ intensity HD_2	LFQ intensity HD_3
-P12345	Alb	sp|P12345|ALBU_MOUSE Serum albumin	69.3	45.1	0.001	100.5	99.2	101.7	0	88.4	87.1	95.4	93.2	90.8
-Q9XYZ1	Hspa1a	sp|Q9XYZ1|HS71A_MOUSE Heat shock protein 1A	70.1	32.7	0.02	NaN	50.1	48.9	77.3	81.9	79.4	66.2	64.8	68.1
-A0A0B4J1G0	Fcgr4	Low affinity immunoglobulin gamma Fc region receptor III-A	28.9	18.4	0.5	62.1	0	61.4	214.9	327.0	266.0	95.6	255.8	NaN
-Q91X77	Cyp2c50	Cytochrome P450 2C50	56.7	41.2	0.03	120.4	118.9	0	88.1	85.2	86.9	77.5	79.1	76.3
