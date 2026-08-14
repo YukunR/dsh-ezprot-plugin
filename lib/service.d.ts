@@ -63,6 +63,14 @@ export declare class ProteomicsService {
     }): Promise<string>;
     /** Set the project comparisons (lightweight; regenerates main.R only). */
     setComparisons(projectDir: string, comparisons: Comparison[]): Promise<string>;
+    private sampleInfoPath;
+    private readSampleInfo;
+    /** Current samples, groups, and any existing Batch column of a project. */
+    batchList(projectDir: string): Promise<string>;
+    /** Write/update the Batch column from a sample→batch mapping. */
+    setBatch(projectDir: string, mapping: Record<string, string>): Promise<string>;
+    /** Remove the Batch column (revert batch assignments). */
+    clearBatch(projectDir: string): Promise<string>;
     /** Inspect a raw biologist file (TSV/CSV/Excel) before tidying. */
     inspectRaw(inputFile: string, opts?: {
         sheet?: string;
