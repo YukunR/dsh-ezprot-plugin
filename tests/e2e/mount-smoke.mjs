@@ -31,8 +31,8 @@ console.log('tools registered:', registered.map((t) => t.name).join(', '))
 for (const t of registered) {
   console.log(`  - ${t.name}: params=${Object.keys(t.parameters ?? {}).join('|')} hasExecute=${typeof t.execute === 'function'}`)
 }
-if (registered.length !== 5) {
-  console.error('EXPECTED 5 TOOLS')
+if (registered.length !== 8) {
+  console.error('EXPECTED 8 TOOLS')
   process.exit(1)
 }
 console.log('MOUNT SMOKE OK')

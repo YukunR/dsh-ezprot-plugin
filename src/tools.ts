@@ -24,6 +24,42 @@ export interface ImageRefLike {
 /** Registers a PNG with the attachment service so the chat can show it. */
 export type ImageRegistrar = (absPath: string, name?: string) => Promise<ImageRefLike | null>
 
+/** Structural view of the harness jobs registry (ctx.jobs). */
+export interface JobsProvider {
+  start(spec: {
+    kind: 'ezprot-setup'
+    label: string
+    owner?: unknown
+    run: () => {
+      cancel: (reason?: string) => void
+      done: Promise<{ status: 'completed' | 'killed' | 'failed'; detail?: string; output?: string }>
+      readOutput?: () => string
+    }
+  }): string
+}
+
+export type GetJobs = () => JobsProvider | undefined
+
+/** Ring buffer for streaming job output: push lines, drain deltas. */
+function ringBuffer(): { push: (chunk: string) => void; drain: () => string } {
+  let text = ''
+  let cursor = 0
+  return {
+    push: (chunk: string) => {
+      text += String(chunk)
+      if (text.length > 200000) {
+        text = text.slice(-50000)
+        cursor = 0 // bounded: drop oldest deltas beyond the cap
+      }
+    },
+    drain: () => {
+      const delta = text.slice(cursor)
+      cursor = text.length
+      return delta
+    },
+  }
+}
+
 interface LogBuffer {
   lines: string[]
 }
@@ -132,20 +168,61 @@ function formatEnvironment(status: EnvironmentReport): string {
   return lines.join('\n')
 }
 
-export function buildToolDefinitions(service: ProteomicsService, registerImage?: ImageRegistrar): ToolDefinitionOptions[] {
+export function buildToolDefinitions(service: ProteomicsService, registerImage?: ImageRegistrar, getJobs?: GetJobs): ToolDefinitionOptions[] {
   return [
     {
       name: 'proteomics_environment',
       description:
-        'Check or set up the proteomics R runtime. action=status reports R location and missing packages; action=setup installs R 4.4.x (silent, no admin) and all missing R packages into the plugin-managed library (one-time, ~10-20 min); action=restore_snapshot extracts a pre-built offline package snapshot zip. Biologists never touch this — the plugin manages everything automatically.',
+        'Check or set up the proteomics R runtime. action=status reports R location and missing packages; action=setup installs R 4.4.x (silent, no admin) and all missing R packages into the plugin-managed library (one-time, ~10-20 min) — it runs as a BACKGROUND JOB, so poll job_output(jobId) for progress and narrate it to the user; action=verify runs the deep runtime probe (every package load + PCAtools encircle/ComBat/enricher smoke paths) and catches Suggests-only gaps; action=restore_snapshot extracts a pre-built offline package snapshot zip. Biologists never touch this — the plugin manages everything automatically.',
       parameters: {
-        action: { type: 'string', enum: ['status', 'setup', 'restore_snapshot'], description: 'What to do. Default status.' },
+        action: { type: 'string', enum: ['status', 'setup', 'verify', 'restore_snapshot'], description: 'What to do. Default status.' },
         snapshotPath: { type: 'string', description: 'Path to the offline snapshot zip (only for restore_snapshot).' },
       },
       output: textOutput,
-      execute: async (args: any) => {
+      execute: async (args: any, exec: any) => {
         const log = logCollector()
-        const status = await guard(service.environmentSetup({ action: (args.action as 'status' | 'setup' | 'restore_snapshot') ?? 'status', snapshotPath: args.snapshotPath, onLog: log.onLog }), log)
+        const action = (args.action ?? 'status') as string
+        if (action === 'verify') {
+          return guard(service.verifyRuntimeReport(), log)
+        }
+        if (action === 'setup') {
+          const jobs = getJobs?.()
+          if (jobs) {
+            const buf = ringBuffer()
+            const jobId = jobs.start({
+              kind: 'ezprot-setup',
+              label: 'ezprot environment setup',
+              ...(exec?.agent ? { owner: exec.agent } : {}),
+              run: () => {
+                const done = (async () => {
+                  try {
+                    await service.environmentSetup({ action: 'setup', snapshotPath: args.snapshotPath, onLog: buf.push })
+                    const probe = await service.verifyRuntimeReport()
+                    return { status: 'completed' as const, detail: probe.replace(/\r?\n/g, '; ') }
+                  } catch (error) {
+                    return { status: 'failed' as const, detail: error instanceof Error ? error.message.slice(0, 500) : String(error) }
+                  }
+                })()
+                return { cancel: () => {}, done, readOutput: buf.drain }
+              },
+            })
+            return [
+              `environment setup started as background job ${jobId}`,
+              'poll job_output with this jobId repeatedly for progress and report it to the user in plain language',
+              'when it completes, run proteomics_environment action=status to confirm readiness',
+            ].join('\n')
+          }
+          // jobs registry unavailable: run inline (blocks, no progress feed)
+          const status = await guard(service.environmentSetup({ action: 'setup', snapshotPath: args.snapshotPath, onLog: log.onLog }), log)
+          const probe = await guard(service.verifyRuntimeReport(), log)
+          return formatEnvironment(status) + '\n' + probe
+        }
+        if (action === 'restore_snapshot') {
+          const status = await guard(service.environmentSetup({ action: 'restore_snapshot', snapshotPath: args.snapshotPath, onLog: log.onLog }), log)
+          const probe = await guard(service.verifyRuntimeReport(), log)
+          return formatEnvironment(status) + '\n' + probe
+        }
+        const status = await guard(service.environmentSetup({ action: 'status', onLog: log.onLog }), log)
         return formatEnvironment(status)
       },
     },

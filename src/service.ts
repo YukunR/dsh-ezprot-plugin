@@ -292,6 +292,29 @@ export class ProteomicsService {
     return inspectRawFile(inputFile, this.runtime, opts)
   }
 
+  /** Deep runtime check: missing packages + heavy-path capability probe. */
+  async verifyRuntimeReport(): Promise<string> {
+    const manifest = await this.loadManifest()
+    const rscript = await this.runtime.detectRscript()
+    if (!rscript) throw new Error('no R installation found — run proteomics_environment action=setup first')
+    const lines: string[] = []
+    const missing = await this.runtime.missingPackages(rscript, manifest)
+    if (missing.length > 0) {
+      lines.push(`packages missing from the managed library: ${missing.join(', ')}`)
+    } else {
+      lines.push('all manifest packages present')
+    }
+    const probe = await this.runtime.verifyRuntime(rscript, manifest)
+    if (probe.ok) {
+      lines.push('runtime probe: ALL OK (package loads, PCAtools biplot/encircle, ComBat, enricher)')
+    } else {
+      lines.push('runtime probe FAILED — the pipeline will break until fixed:')
+      for (const f of probe.failures) lines.push(`  - ${f}`)
+      if (probe.tail.trim()) lines.push(`probe tail: ${probe.tail.slice(-1500)}`)
+    }
+    return lines.join('\n')
+  }
+
   /** Tidy a raw biologist file into the canonical matrix + sample info. */
   async tidyRaw(inputFile: string, outputDir: string, opts: TidyOptions): Promise<string> {
     const result = await tidyRawFile(inputFile, this.runtime, outputDir, opts)

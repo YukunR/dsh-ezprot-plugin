@@ -284,6 +284,50 @@ export class Runtime {
     return required.filter((pkg) => !installed.includes(pkg))
   }
 
+  /**
+   * Runtime capability probe: loads every manifest package and exercises the
+   * heavy pipeline code paths (PCAtools encircle/ggalt, ComBat, enricher).
+   * Catches Suggests-only gaps that static manifest checks cannot see.
+   */
+  async verifyRuntime(rscript: string, manifest: PackageManifest, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<{ ok: boolean; failures: string[]; tail: string }> {
+    const log: LogSink = opts.onLog ?? (() => {})
+    const timeoutMs = opts.timeoutMs ?? 15 * 60 * 1000
+    const runtimeManifest = {
+      cran: manifest.cran,
+      bioc: manifest.bioc,
+      biocVersion: BIOC_VERSION,
+      repos: { cran: this.cranRepo, bioc: this.biocRepo },
+    }
+    await writeFile(join(this.dataDir, 'manifest-runtime.json'), JSON.stringify(runtimeManifest))
+    const proc = spawn(rscript, [join(packageDir, 'r', 'check_runtime.R'), join(this.dataDir, 'manifest-runtime.json')], {
+      cwd: this.dataDir,
+      env: { ...process.env, R_LIBS_USER: this.libraryDir },
+      windowsHide: true,
+    })
+    let out = ''
+    let err = ''
+    proc.stdout.on('data', (d) => { out += d; log(d) })
+    proc.stderr.on('data', (d) => { err += d; log(d) })
+    let timedOut = false
+    const code = await new Promise<number | null>((resolvePromise) => {
+      const timer = setTimeout(() => {
+        timedOut = true
+        try { proc.kill() } catch { /* already dead */ }
+      }, timeoutMs)
+      proc.on('error', () => { clearTimeout(timer); resolvePromise(null) })
+      proc.on('close', (c) => { clearTimeout(timer); resolvePromise(c) })
+    })
+    const failures = [...out.matchAll(/CHECK_FAIL:\s*([^\r\n]*)/g)].map((m) => m[1].trim())
+    if (code !== 0 && failures.length === 0) {
+      failures.push(`probe exited with code ${code}`)
+    }
+    return {
+      ok: !timedOut && code === 0 && failures.length === 0,
+      failures,
+      tail: (err || out).slice(-3000),
+    }
+  }
+
   /** Extract a previously created offline snapshot zip into the managed runtime dir. */
   async restoreSnapshot(snapshotPath: string, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<void> {
     const log: LogSink = opts.onLog ?? (() => {})

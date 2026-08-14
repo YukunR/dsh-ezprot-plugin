@@ -78,17 +78,37 @@ if (!"gghalves" %in% rownames(installed.packages())) {
   if (!ok) cat("WARNING: gghalves install failed\n")
 }
 
-# Source-only fallback: some Bioconductor packages (GO.db and other annotation
-# data) ship no Windows binaries. Install whatever is still missing from
-# source; data packages compile nothing, so no Rtools is required. GO.db needs
-# GenomeInfoDbData, which is also source-only — pull it explicitly.
+# ggalt was archived from CRAN (PCAtools needs it for biplot encircle);
+# install 0.4.0 from the CRAN archive (pure R, no compilation).
+if (!"ggalt" %in% rownames(installed.packages())) {
+  cat("Installing ggalt 0.4.0 from the CRAN archive (archived from CRAN)\n")
+  ok <- install_retry(function() {
+    tgz <- tempfile(fileext = ".tar.gz")
+    download.file(paste0(m$repos$cran, "/src/contrib/Archive/ggalt/ggalt_0.4.0.tar.gz"),
+      tgz, mode = "wb", quiet = TRUE)
+    remotes::install_local(tgz, dependencies = TRUE)
+  }, "ggalt from CRAN archive")
+  if (!ok) cat("WARNING: ggalt install failed\n")
+}
+
+# Fallbacks for packages without Windows binaries on the first pass.
+#   CRAN: retry with binary-then-source (ggalt is pure R, no Rtools needed;
+#         its dependencies keep installing as binaries).
+#   Bioc: some packages (GO.db and other annotation data) ship source only;
+#         data packages compile nothing. GO.db needs GenomeInfoDbData too.
 installed <- rownames(installed.packages())
-still <- setdiff(c(m$cran, m$bioc), installed)
-if ("GO.db" %in% still) still <- unique(c("GenomeInfoDbData", still))
-if (length(still) > 0) {
-  cat("Installing remaining packages from source:", paste(still, collapse = " "), "\n")
-  ok <- install_retry(function() BiocManager::install(still, version = m$biocVersion, ask = FALSE, update = FALSE, type = "source", dependencies = TRUE), "source fallback")
-  if (!ok) cat("WARNING: source fallback failed\n")
+still_cran <- setdiff(m$cran, installed)
+still_bioc <- setdiff(m$bioc, installed)
+if ("GO.db" %in% still_bioc) still_bioc <- unique(c("GenomeInfoDbData", still_bioc))
+if (length(still_cran) > 0) {
+  cat("Installing remaining CRAN packages (binary then source):", paste(still_cran, collapse = " "), "\n")
+  ok <- install_retry(function() install.packages(still_cran, type = "both", dependencies = TRUE), "CRAN binary-then-source fallback")
+  if (!ok) cat("WARNING: CRAN fallback failed\n")
+}
+if (length(still_bioc) > 0) {
+  cat("Installing remaining Bioconductor packages from source:", paste(still_bioc, collapse = " "), "\n")
+  ok <- install_retry(function() BiocManager::install(still_bioc, version = m$biocVersion, ask = FALSE, update = FALSE, type = "source", dependencies = TRUE), "Bioconductor source fallback")
+  if (!ok) cat("WARNING: Bioconductor source fallback failed\n")
 }
 
 installed <- rownames(installed.packages())

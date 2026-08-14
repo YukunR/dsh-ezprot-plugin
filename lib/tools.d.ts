@@ -12,5 +12,23 @@ export interface ImageRefLike {
 }
 /** Registers a PNG with the attachment service so the chat can show it. */
 export type ImageRegistrar = (absPath: string, name?: string) => Promise<ImageRefLike | null>;
-export declare function buildToolDefinitions(service: ProteomicsService, registerImage?: ImageRegistrar): ToolDefinitionOptions[];
+/** Structural view of the harness jobs registry (ctx.jobs). */
+export interface JobsProvider {
+    start(spec: {
+        kind: 'ezprot-setup';
+        label: string;
+        owner?: unknown;
+        run: () => {
+            cancel: (reason?: string) => void;
+            done: Promise<{
+                status: 'completed' | 'killed' | 'failed';
+                detail?: string;
+                output?: string;
+            }>;
+            readOutput?: () => string;
+        };
+    }): string;
+}
+export type GetJobs = () => JobsProvider | undefined;
+export declare function buildToolDefinitions(service: ProteomicsService, registerImage?: ImageRegistrar, getJobs?: GetJobs): ToolDefinitionOptions[];
 export {};

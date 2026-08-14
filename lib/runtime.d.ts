@@ -67,6 +67,19 @@ export declare class Runtime {
     }): Promise<void>;
     /** Missing manifest packages (empty = complete library). */
     missingPackages(rscript: string, manifest: PackageManifest): Promise<string[]>;
+    /**
+     * Runtime capability probe: loads every manifest package and exercises the
+     * heavy pipeline code paths (PCAtools encircle/ggalt, ComBat, enricher).
+     * Catches Suggests-only gaps that static manifest checks cannot see.
+     */
+    verifyRuntime(rscript: string, manifest: PackageManifest, opts?: {
+        onLog?: LogSink;
+        timeoutMs?: number;
+    }): Promise<{
+        ok: boolean;
+        failures: string[];
+        tail: string;
+    }>;
     /** Extract a previously created offline snapshot zip into the managed runtime dir. */
     restoreSnapshot(snapshotPath: string, opts?: {
         onLog?: LogSink;
