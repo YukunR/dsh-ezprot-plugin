@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { ProteomicsService, STEPS } from '../../src/service.js'
 
 describe('STEPS', () => {
@@ -8,19 +11,41 @@ describe('STEPS', () => {
 })
 
 describe('resolveBackend', () => {
-  const svc = new ProteomicsService({})
-
-  it('prefers local R in auto mode', () => {
-    expect(svc.resolveBackend(true, true)).toBe('local')
-    expect(svc.resolveBackend(true, false)).toBe('local')
+  it('prefers local R in auto mode', async () => {
+    const svc = new ProteomicsService({ dataDir: '' })
+    expect(await svc.resolveBackend(true, true)).toBe('local')
+    expect(await svc.resolveBackend(true, false)).toBe('local')
   })
-  it('falls back to docker when no local R exists', () => {
-    expect(svc.resolveBackend(false, true)).toBe('docker')
-    expect(svc.resolveBackend(false, false)).toBe('local')
+  it('falls back to docker when no local R exists', async () => {
+    const svc = new ProteomicsService({ dataDir: '' })
+    expect(await svc.resolveBackend(false, true)).toBe('docker')
+    expect(await svc.resolveBackend(false, false)).toBe('local')
   })
-  it('honors explicit backends', () => {
-    expect(new ProteomicsService({ backend: 'local' }).resolveBackend(false, true)).toBe('local')
-    expect(new ProteomicsService({ backend: 'docker' }).resolveBackend(true, false)).toBe('docker')
+  it('honors explicit backends', async () => {
+    expect(await new ProteomicsService({ backend: 'local', dataDir: '' }).resolveBackend(false, true)).toBe('local')
+    expect(await new ProteomicsService({ backend: 'docker', dataDir: '' }).resolveBackend(true, false)).toBe('docker')
+  })
+  it('honors the persisted setup choice over auto detection', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ezprot-be-'))
+    try {
+      const svc = new ProteomicsService({ dataDir: dir })
+      await svc.runtime.setState({ backend: 'docker', dockerImage: 'test/ezprot:latest' })
+      expect(await svc.resolveBackend(true, true)).toBe('docker') // local R exists, but user chose docker
+      await svc.runtime.setState({ backend: 'local' })
+      expect(await svc.resolveBackend(false, true)).toBe('local') // docker exists, but user chose local R
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+  it('rejects the persisted docker choice when Docker is unavailable', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ezprot-be-'))
+    try {
+      const svc = new ProteomicsService({ dataDir: dir })
+      await svc.runtime.setState({ backend: 'docker' })
+      await expect(svc.resolveBackend(true, false)).rejects.toThrow(/Docker is not available/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

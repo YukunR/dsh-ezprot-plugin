@@ -1,0 +1,18 @@
+{
+  "cran": [
+    "tidyverse", "ggplot2", "pheatmap", "cowplot", "ggforce", "gghalves", "ggalt",
+    "ggdist", "ggrepel", "patchwork", "viridis", "corrplot", "ggdendro",
+    "RColorBrewer", "scales", "stringr", "stringi", "magrittr", "broom", "car",
+    "progress", "jsonlite", "digest", "reshape2", "multiUS", "data.table",
+    "optparse", "BiocManager", "readxl", "remotes"
+  ],
+  "bioc": [
+    "PCAtools", "sva", "clusterProfiler", "enrichplot", "DOSE", "fgsea", "qvalue",
+    "GO.db", "AnnotationDbi"
+  ],
+  "biocVersion": "3.20",
+  "repos": {
+    "cran": "https://mirrors.westlake.edu.cn/CRAN",
+    "bioc": "https://mirrors.westlake.edu.cn/bioconductor"
+  }
+}

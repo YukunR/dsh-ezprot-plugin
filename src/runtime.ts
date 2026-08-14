@@ -2,7 +2,7 @@
 // installation from mirrors, offline snapshot restore, health status.
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, createWriteStream } from 'node:fs'
-import { mkdir, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -326,6 +326,92 @@ export class Runtime {
       failures,
       tail: (err || out).slice(-3000),
     }
+  }
+
+  // ── runtime state + Docker backend ────────────────────────────────────────
+  /** Persisted backend choice (written by environment setup, read by steps). */
+  statePath(): string {
+    return join(this.dataDir, 'runtime-state.json')
+  }
+
+  async getState(): Promise<{ backend?: 'local' | 'docker'; dockerImage?: string }> {
+    try {
+      const raw = await readFile(this.statePath(), 'utf8')
+      const parsed = JSON.parse(raw) as { backend?: string; dockerImage?: string }
+      return {
+        backend: parsed.backend === 'docker' || parsed.backend === 'local' ? parsed.backend : undefined,
+        dockerImage: typeof parsed.dockerImage === 'string' ? parsed.dockerImage : undefined,
+      }
+    } catch {
+      return {}
+    }
+  }
+
+  async setState(patch: { backend?: 'local' | 'docker'; dockerImage?: string }): Promise<void> {
+    await mkdir(this.dataDir, { recursive: true })
+    const current = await this.getState()
+    await writeFile(this.statePath(), JSON.stringify({ ...current, ...patch }, null, 2), 'utf8')
+  }
+
+  dockerAvailable(): boolean {
+    try {
+      const res = spawnSync('docker', ['--version'], { encoding: 'utf8', timeout: 15000, windowsHide: true })
+      return res.status === 0
+    } catch {
+      return false
+    }
+  }
+
+  async dockerImageReady(image: string): Promise<boolean> {
+    try {
+      const res = spawnSync('docker', ['image', 'inspect', image], { encoding: 'utf8', timeout: 30000, windowsHide: true })
+      return res.status === 0
+    } catch {
+      return false
+    }
+  }
+
+  async dockerPull(image: string, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<void> {
+    const log: LogSink = opts.onLog ?? (() => {})
+    const timeoutMs = opts.timeoutMs ?? 30 * 60 * 1000
+    const proc = spawn('docker', ['pull', image], { windowsHide: true })
+    let err = ''
+    proc.stdout.on('data', (d) => log(d.toString()))
+    proc.stderr.on('data', (d) => { err += d.toString(); log(d.toString()) })
+    let timedOut = false
+    const code = await new Promise<number | null>((resolvePromise) => {
+      const timer = setTimeout(() => {
+        timedOut = true
+        try { proc.kill() } catch { /* already dead */ }
+      }, timeoutMs)
+      proc.on('error', () => { clearTimeout(timer); resolvePromise(null) })
+      proc.on('close', (c) => { clearTimeout(timer); resolvePromise(c) })
+    })
+    if (timedOut) throw new Error(`docker pull ${image} timed out after ${timeoutMs}ms`)
+    if (code !== 0) throw new Error(`docker pull ${image} failed (exit ${code})\n${err.slice(-3000)}`)
+  }
+
+  /** Run the runtime probe INSIDE the image (the image carries check_runtime.R). */
+  async dockerVerify(image: string, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<{ ok: boolean; failures: string[] }> {
+    const log: LogSink = opts.onLog ?? (() => {})
+    const timeoutMs = opts.timeoutMs ?? 20 * 60 * 1000
+    const proc = spawn('docker', ['run', '--rm', image, 'Rscript', '/opt/ezprot/check_runtime.R', '/opt/ezprot/manifest-runtime.json'], { windowsHide: true })
+    let out = ''
+    let err = ''
+    proc.stdout.on('data', (d) => { out += d.toString(); log(d.toString()) })
+    proc.stderr.on('data', (d) => { err += d.toString(); log(d.toString()) })
+    let timedOut = false
+    const code = await new Promise<number | null>((resolvePromise) => {
+      const timer = setTimeout(() => {
+        timedOut = true
+        try { proc.kill() } catch { /* already dead */ }
+      }, timeoutMs)
+      proc.on('error', () => { clearTimeout(timer); resolvePromise(null) })
+      proc.on('close', (c) => { clearTimeout(timer); resolvePromise(c) })
+    })
+    const failures = [...out.matchAll(/CHECK_FAIL:\s*([^\r\n]*)/g)].map((m) => m[1].trim())
+    if (code !== 0 && failures.length === 0) failures.push(`probe exited with code ${code}${timedOut ? ' (timed out)' : ''}`)
+    return { ok: !timedOut && code === 0 && failures.length === 0, failures }
   }
 
   /** Extract a previously created offline snapshot zip into the managed runtime dir. */

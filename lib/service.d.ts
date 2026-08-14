@@ -43,8 +43,9 @@ export declare class ProteomicsService {
     dockerAvailable(): Promise<boolean>;
     environmentStatus(): Promise<EnvironmentReport>;
     environmentSetup(opts?: {
-        action?: 'status' | 'setup' | 'restore_snapshot';
+        action?: 'status' | 'setup' | 'verify' | 'restore_snapshot';
         snapshotPath?: string;
+        backend?: 'local' | 'docker';
         onLog?: LogSink;
     }): Promise<EnvironmentReport>;
     backgroundEnsure(organism: Organism, opts?: {
@@ -82,8 +83,12 @@ export declare class ProteomicsService {
     /** PNG files produced by a step, for chat display (project-relative). */
     stepImages(projectDir: string, step: Step): Promise<string[]>;
     stepImagePaths(project: Project, step: Step): Promise<string[]>;
-    /** backend: 'auto' → docker only when no local R exists but Docker does. */
-    resolveBackend(hasLocalR: boolean, hasDocker: boolean): 'local' | 'docker';
+    /**
+     * Backend resolution order: explicit config (local/docker) → persisted
+     * setup choice (runtime-state.json) → auto (local R preferred; docker only
+     * when no local R exists but Docker does).
+     */
+    resolveBackend(hasLocalR: boolean, hasDocker: boolean): Promise<'local' | 'docker'>;
     runStep(opts: {
         projectDir: string;
         step: Step;

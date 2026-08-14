@@ -80,6 +80,30 @@ export declare class Runtime {
         failures: string[];
         tail: string;
     }>;
+    /** Persisted backend choice (written by environment setup, read by steps). */
+    statePath(): string;
+    getState(): Promise<{
+        backend?: 'local' | 'docker';
+        dockerImage?: string;
+    }>;
+    setState(patch: {
+        backend?: 'local' | 'docker';
+        dockerImage?: string;
+    }): Promise<void>;
+    dockerAvailable(): boolean;
+    dockerImageReady(image: string): Promise<boolean>;
+    dockerPull(image: string, opts?: {
+        onLog?: LogSink;
+        timeoutMs?: number;
+    }): Promise<void>;
+    /** Run the runtime probe INSIDE the image (the image carries check_runtime.R). */
+    dockerVerify(image: string, opts?: {
+        onLog?: LogSink;
+        timeoutMs?: number;
+    }): Promise<{
+        ok: boolean;
+        failures: string[];
+    }>;
     /** Extract a previously created offline snapshot zip into the managed runtime dir. */
     restoreSnapshot(snapshotPath: string, opts?: {
         onLog?: LogSink;

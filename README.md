@@ -86,14 +86,26 @@ dsh plugin --profile web add "link:D:/ResearchProject/ezprot-dsh-plugin"   # lin
 
 ## Docker 可选后端
 
-本地托管 R 是默认方案（免管理员、免 Docker）。需要可复现环境或服务器部署时：
+本地托管 R 是默认方案（免管理员、免 Docker）。发布 Docker 镜像后，用户侧就完全
+摆脱了对 CRAN/Bioc 镜像质量的依赖（`docker pull` 成品，使用侧零下载）：
 
-```bash
-docker build -t ezprot:latest -f docker/Dockerfile .
-# 然后在插件配置里加: backend: docker
+1. 在有 Docker 的机器上按 [`docker/README.md`](docker/README.md) 构建并上传镜像
+   （镜像内跑插件自己的安装器和运行时探针，构建失败即探针失败）；
+2. 插件配置里填镜像名：
+
+```yaml
+# cordis.patch.yml
+- id: ezprot
+  config:
+    enableInstall: true
+    backend: auto            # 或显式 docker
+    dockerImage: '<你的用户名>/ezprot:latest'
 ```
 
-镜像内含 R 4.4.0 + 全部依赖包（Bioc 3.20）；运行时装挂项目目录，分析数据不出容器。
+3. 用户侧体验：`status` 会报告 Docker 是否可用；需要装环境时 agent 会**询问用户
+   选 Docker 还是本地 R**（附优劣对比），选择会被记住，后续所有步骤自动走所选后端。
+
+镜像内含 R 4.4.0 + 全部依赖包（Bioc 3.20）；运行时挂载项目目录与背景库缓存，分析数据不出容器。
 
 ## 离线部署（无网实验室）
 

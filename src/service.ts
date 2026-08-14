@@ -4,7 +4,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
 import { Runtime, type LogSink, type PackageManifest, type RuntimeStatus } from './runtime.js'
 import { Backgrounds, ORGANISMS, packageDir, type BackgroundStatus, type Organism } from './backgrounds.js'
 import { Project, preflight, writeGeneratedSampleInfo, type Comparison, type PipelineParams, type ProjectState } from './pipeline.js'
@@ -89,12 +88,7 @@ export class ProteomicsService {
 
   // ── environment ───────────────────────────────────────────────────────────
   async dockerAvailable(): Promise<boolean> {
-    try {
-      const res = spawnSync('docker', ['--version'], { encoding: 'utf8', timeout: 15000, windowsHide: true })
-      return res.status === 0
-    } catch {
-      return false
-    }
+    return this.runtime.dockerAvailable()
   }
 
   async environmentStatus(): Promise<EnvironmentReport> {
@@ -106,12 +100,36 @@ export class ProteomicsService {
     return { ...status, dockerAvailable: docker, dockerImage: this.config.dockerImage ?? 'ezprot:latest', organisms: orgs, dataDir: this.runtime.dataDir }
   }
 
-  async environmentSetup(opts: { action?: 'status' | 'setup' | 'restore_snapshot'; snapshotPath?: string; onLog?: LogSink } = {}): Promise<EnvironmentReport> {
-    const { action, snapshotPath, onLog } = opts
+  async environmentSetup(opts: { action?: 'status' | 'setup' | 'verify' | 'restore_snapshot'; snapshotPath?: string; backend?: 'local' | 'docker'; onLog?: LogSink } = {}): Promise<EnvironmentReport> {
+    const { action, snapshotPath, backend, onLog } = opts
     const log: LogSink = onLog ?? (() => {})
     const manifest = await this.loadManifest()
     const status = await this.environmentStatus()
     if (action === 'status' || action === undefined) return status
+
+    // Docker backend: pull the published image and verify it in-container.
+    if (backend === 'docker') {
+      if (!status.dockerAvailable) {
+        throw new Error('Docker is not available on this machine — install Docker first, or use backend=local for the managed R install')
+      }
+      const image = this.config.dockerImage ?? 'ezprot:latest'
+      if (!(await this.runtime.dockerImageReady(image))) {
+        log(`pulling ${image} (one-time, a few minutes) ...`)
+        await this.runtime.dockerPull(image, { onLog })
+      } else {
+        log(`image ${image} already present`)
+      }
+      log(`running the runtime probe inside ${image} ...`)
+      const verify = await this.runtime.dockerVerify(image, { onLog })
+      if (!verify.ok) {
+        throw new Error(`docker image ${image} failed the runtime probe:\n${verify.failures.map((f) => `  - ${f}`).join('\n')}`)
+      }
+      log(`docker environment ready (${image})`)
+      await this.runtime.setState({ backend: 'docker', dockerImage: image })
+      return this.environmentStatus()
+    }
+
+    // Local backend: managed R + package library (also runs for restore_snapshot).
     let rscript = await this.runtime.detectRscript()
     if (!rscript) {
       if (this.config.enableInstall === false) {
@@ -125,11 +143,13 @@ export class ProteomicsService {
     if (action === 'restore_snapshot') {
       if (!snapshotPath) throw new Error('snapshotPath is required for restore_snapshot')
       await this.runtime.restoreSnapshot(snapshotPath, { onLog })
+      await this.runtime.setState({ backend: 'local' })
       return this.environmentStatus()
     }
     const missing = await this.runtime.missingPackages(rscript, manifest)
     if (missing.length === 0) {
       log('all required R packages are already installed — nothing to do')
+      await this.runtime.setState({ backend: 'local' })
       return this.environmentStatus()
     }
     if (this.config.enableInstall === false) {
@@ -138,6 +158,7 @@ export class ProteomicsService {
     }
     log(`${missing.length} package(s) missing, installing once into ${this.runtime.libraryDir} (mirrors: ${this.runtime.cranRepo}, ${this.runtime.biocRepo}) ...`)
     await this.runtime.installPackages(rscript, manifest, { onLog, timeoutMs: 45 * 60 * 1000 })
+    await this.runtime.setState({ backend: 'local' })
     return this.environmentStatus()
   }
 
@@ -345,11 +366,21 @@ export class ProteomicsService {
     return paths.filter((rel) => existsSync(join(project.dir, rel)))
   }
 
-  /** backend: 'auto' → docker only when no local R exists but Docker does. */
-  resolveBackend(hasLocalR: boolean, hasDocker: boolean): 'local' | 'docker' {
+  /**
+   * Backend resolution order: explicit config (local/docker) → persisted
+   * setup choice (runtime-state.json) → auto (local R preferred; docker only
+   * when no local R exists but Docker does).
+   */
+  async resolveBackend(hasLocalR: boolean, hasDocker: boolean): Promise<'local' | 'docker'> {
     const configured = this.config.backend || 'auto'
     if (configured === 'local') return 'local'
     if (configured === 'docker') return 'docker'
+    const state = await this.runtime.getState()
+    if (state.backend === 'docker') {
+      if (!hasDocker) throw new Error('the project backend was set to Docker, but Docker is not available on this machine')
+      return 'docker'
+    }
+    if (state.backend === 'local') return 'local'
     if (hasLocalR) return 'local'
     if (hasDocker) return 'docker'
     return 'local'
@@ -374,7 +405,7 @@ export class ProteomicsService {
       const manifest = await this.loadManifest()
       const rscript = await this.runtime.detectRscript()
       const dockerOk = await this.dockerAvailable()
-      const backend = this.resolveBackend(rscript !== null, dockerOk)
+      const backend = await this.resolveBackend(rscript !== null, dockerOk)
       if (backend !== 'docker') {
         if (!rscript) throw new Error('no R installation found — run proteomics_environment action=setup first')
         const missing = await this.runtime.missingPackages(rscript, manifest)
@@ -382,7 +413,7 @@ export class ProteomicsService {
           throw new Error(`${missing.length} R package(s) missing (${missing.slice(0, 10).join(', ')}${missing.length > 10 ? '…' : ''}) — run proteomics_environment action=setup first`)
         }
       } else if (!dockerOk) {
-        throw new Error(`backend '${this.config.backend}' requires Docker, but it is unavailable`)
+        throw new Error(`the docker backend was selected, but Docker is unavailable on this machine`)
       }
       // backgrounds required by enrichment/gsea steps
       if (step === 'enrich' || step === 'gsea' || step === 'all') {
@@ -396,12 +427,13 @@ export class ProteomicsService {
       project.regenerateMainR(state)
       const log: LogSink = onLog ?? (() => {})
       const rStep = step === 'batch_remove' ? 'batch-removal' : step
+      const runtimeState = await this.runtime.getState()
       const res = await project.runStep(this.runtime, rStep, {
         rerun,
         timeoutMs: this.timeoutMs,
         onLog: log,
         backend,
-        dockerImage: this.config.dockerImage ?? 'ezprot:latest',
+        dockerImage: runtimeState.dockerImage ?? this.config.dockerImage ?? 'ezprot:latest',
       })
       if (res.timedOut) throw new Error(`step ${step} timed out after ${this.timeoutMs}ms`)
       if (res.code !== 0) {
