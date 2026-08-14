@@ -75,6 +75,8 @@ export declare class ProteomicsService {
     inspectRaw(inputFile: string, opts?: {
         sheet?: string;
     }): Promise<InspectResult>;
+    /** Deep runtime check: missing packages + heavy-path capability probe. */
+    verifyRuntimeReport(): Promise<string>;
     /** Tidy a raw biologist file into the canonical matrix + sample info. */
     tidyRaw(inputFile: string, outputDir: string, opts: TidyOptions): Promise<string>;
     /** PNG files produced by a step, for chat display (project-relative). */

@@ -9,6 +9,7 @@
     "cowplot",
     "ggforce",
     "gghalves",
+    "ggalt",
     "ggdist",
     "ggrepel",
     "patchwork",
