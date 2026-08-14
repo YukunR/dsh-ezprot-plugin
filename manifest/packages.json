@@ -29,7 +29,8 @@
     "multiUS",
     "data.table",
     "optparse",
-    "BiocManager"
+    "BiocManager",
+    "readxl"
   ],
   "bioc": [
     "PCAtools",
