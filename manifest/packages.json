@@ -30,7 +30,8 @@
     "data.table",
     "optparse",
     "BiocManager",
-    "readxl"
+    "readxl",
+    "remotes"
   ],
   "bioc": [
     "PCAtools",

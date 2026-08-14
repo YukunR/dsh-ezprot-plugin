@@ -1,6 +1,6 @@
 node_modules/
 .pnpm-store/
 tests/projects/
-tests/.runtime/
+tests/.runtime*/
 projects/
 *.tsbuildinfo
