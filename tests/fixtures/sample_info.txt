@@ -1,0 +1,16 @@
+Sample	Group
+NC_1	NC
+NC_2	NC
+NC_3	NC
+NC_4	NC
+NC_5	NC
+HC_1	HC
+HC_2	HC
+HC_3	HC
+HC_4	HC
+HC_5	HC
+HD_1	HD
+HD_2	HD
+HD_3	HD
+HD_4	HD
+HD_5	HD
