@@ -462,6 +462,14 @@ step_differential_analysis_single <- function(workspace, group_name, config = NU
     width = 7,
     height = 7
   )
+  # Plugin addition: PNG beside the PDF so the DSH chat can show it.
+  ggsave(
+    filename = paste0(group_output_dir, "volcano_plot.png"),
+    plot = volcano_results$plot,
+    width = 7,
+    height = 7,
+    dpi = 150
+  )
 
   log_message(workspace, paste("Comparison group", group_name, "DEA completed"))
   return(paste("Comparison group", group_name, "DEA completed"))

@@ -173,6 +173,12 @@ create_correlation_analysis <- function(expression_matrix,
     plot = cor_heatmap,
     width = plot_width, height = plot_height
   )
+  # Plugin addition: PNG beside the PDF so the DSH chat can show it.
+  ggsave(
+    filename = file.path(output_dir, "sample_correlation_heatmap.png"),
+    plot = cor_heatmap,
+    width = plot_width, height = plot_height, dpi = 150
+  )
 
   # Create dendrogram
   dist_matrix <- dist(t(expression_matrix))
@@ -229,6 +235,12 @@ create_correlation_analysis <- function(expression_matrix,
       filename = file.path(output_dir, "sample_dendrogram_colored.pdf"),
       plot = gg_dend,
       width = plot_height, height = plot_width
+    )
+    # Plugin addition: PNG beside the PDF so the DSH chat can show it.
+    ggsave(
+      filename = file.path(output_dir, "sample_dendrogram_colored.png"),
+      plot = gg_dend,
+      width = plot_height, height = plot_width, dpi = 150
     )
   }
 
@@ -361,6 +373,12 @@ perform_pca_analysis <- function(expression_matrix,
     plot = variance_plot,
     width = plot_width * 0.8, height = plot_height * 0.6
   )
+  # Plugin addition: PNG beside the PDF so the DSH chat can show it.
+  ggsave(
+    filename = file.path(output_dir, "pca_variance_explained.png"),
+    plot = variance_plot,
+    width = plot_width * 0.8, height = plot_height * 0.6, dpi = 150
+  )
 
   # 3. PCA Biplot (PC1 vs PC2)
   pca_biplot <- biplot(pca_result,
@@ -391,6 +409,12 @@ perform_pca_analysis <- function(expression_matrix,
     filename = file.path(output_dir, "pca_biplot_PC1_PC2.pdf"),
     plot = pca_biplot,
     width = plot_width, height = plot_height
+  )
+  # Plugin addition: PNG beside the PDF so the DSH chat can show it.
+  ggsave(
+    filename = file.path(output_dir, "pca_biplot_PC1_PC2.png"),
+    plot = pca_biplot,
+    width = plot_width, height = plot_height, dpi = 150
   )
 
   # 4. Additional PC combinations

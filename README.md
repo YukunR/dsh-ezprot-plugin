@@ -4,7 +4,9 @@
 
 - **零环境门槛**：自动探测/静默安装 R（免管理员权限），R 包一次性装入插件私有库，只补缺不重装；检测到 Docker 时可用预构建镜像后端。
 - **大陆网络友好**：默认西湖大学 CRAN/Bioconductor 镜像 + 下载重试；支持离线快照 zip 一键恢复（实验室断网也能装）。
-- **逐步可追溯**：normalize → pca → batch_remove → dea → enrich → gsea 每一步都是一次独立工具调用，在 harness 轨迹里各占一张卡片（参数 + 结构化摘要 + 产物路径 + 日志）。
+- **逐步可追溯**：normalize → pca → batch_remove → dea → enrich → gsea 每一步都是一次独立工具调用，在 harness 轨迹里各占一张卡片（参数 + 结构化摘要 + 产物路径 + 日志）；PCA/火山图以 PNG 嵌入聊天直接展示。
+- **原始数据导入**：`proteomics_import` 读取生物学家的原始 TSV/CSV/Excel（readxl，多 sheet、无关列），列分类启发式 + 交互确认后整理成规范矩阵。
+- **人在环决策点**：比较组经 `proteomics_compare` 确认后才写入（绝不猜测）；PCA 后强制停下展示聚类图，由用户决定继续或批次校正。
 - **运行期零联网**：GO/KEGG 富集与 GSEA 全部使用本地背景文件；背景库按物种缓存（内置 mouse，human/rat 首次按需构建一次）。
 - **内置 QC 与智能默认**：pre-flight 自动检查样本匹配/缺失率/重复 ID/批次列，自适应 FC 阈值 + 敏感性信息，报告骨架直接生成。
 
