@@ -2,4 +2,5 @@ node_modules/
 .pnpm-store/
 tests/projects/
 tests/.runtime/
+projects/
 *.tsbuildinfo
