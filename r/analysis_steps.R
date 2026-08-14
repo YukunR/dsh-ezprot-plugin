@@ -50,9 +50,11 @@ step_normalization <- function(workspace, config = NULL) {
 
   source("core/normalization.R", local = TRUE)
 
-  # Read data
-  protein_data <- read.delim(config$protein_expr_file)
-  sample_info <- read.delim(config$sample_info_file)
+  # Read data (check.names = FALSE preserves original sample names with spaces,
+  # e.g. "LFQ intensity NC_1"; default TRUE would mangle them to
+  # "LFQ.intensity.NC_1" and break the sample_info <-> matrix join)
+  protein_data <- read.delim(config$protein_expr_file, check.names = FALSE)
+  sample_info <- read.delim(config$sample_info_file, check.names = FALSE)
 
   # Make directories
   norm_output_dir <- paste0(workspace$base_dir, "/norm_results/")
