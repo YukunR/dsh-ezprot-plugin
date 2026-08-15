@@ -8,16 +8,18 @@
 
 ## 安装
 
+前置要求：Node.js（自带 `npx`）和 pnpm——`npm install -g pnpm`。
+
 需要 [`dsh`](https://github.com/deepseek-ai/deepseek-harness) 命令行工具（Windows / macOS / Linux 通用），一条命令：
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
+npx @deepseek-ai/dsh plugin --profile web add dsh-ezprot-plugin
 ```
 
 已全局安装 `dsh` 时，去掉 `npx @deepseek-ai/` 前缀即可：
 
 ```bash
-dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
+dsh plugin --profile web add dsh-ezprot-plugin
 ```
 
 然后重启 `dsh web`。每个会话的 agent 都会获得 `proteomics_*` 工具。

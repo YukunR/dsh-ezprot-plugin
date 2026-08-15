@@ -22,11 +22,14 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YukunR/dsh-ezprot-plugin.git"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
