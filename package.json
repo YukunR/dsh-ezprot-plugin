@@ -1,5 +1,5 @@
 {
-  "name": "ezprot-dsh-plugin",
+  "name": "dsh-ezprot-plugin",
   "version": "0.1.0",
   "description": "Plug-and-play proteomics analysis bundle for DeepSeek Harness: auto-managed R 4.4 runtime, step-wise traceable pipeline (normalize / PCA / batch / DEA / enrichment / GSEA), cached GO-KEGG annotation backgrounds.",
   "type": "module",
@@ -14,7 +14,6 @@
   "files": [
     "lib",
     "r",
-    "data/backgrounds/mouse",
     "manifest",
     "scripts",
     "docs",
