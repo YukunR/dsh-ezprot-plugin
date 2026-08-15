@@ -63,7 +63,7 @@ export function parseTable(text: string, sep = '\t'): ParsedTable {
   return { header, rows, missing }
 }
 
-function looksNumeric(values: string[]): number {
+export function looksNumeric(values: string[]): number {
   let numeric = 0
   let total = 0
   for (const v of values) {

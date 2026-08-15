@@ -163,6 +163,8 @@ export interface PreflightResult {
     nSamples: number;
     sampleColumns: string[];
     metaColumns: string[];
+    /** Non-meta columns whose values are mostly non-numeric (e.g. MaxQuant "Reverse" flags). */
+    nonNumericSampleColumns: string[];
     inferredGroups: string[];
     duplicateAccessions: number;
     naBuckets: {

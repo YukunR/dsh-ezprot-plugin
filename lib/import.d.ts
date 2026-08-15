@@ -31,6 +31,7 @@ interface ParsedTable {
 }
 /** Parse a TSV/CSV into header + rows (values left as strings). */
 export declare function parseTable(text: string, sep?: string): ParsedTable;
+export declare function looksNumeric(values: string[]): number;
 /** Classify every column of a raw table with heuristics (candidates only — the user confirms). */
 export declare function classifyColumns(header: string[], rows: string[][]): ColumnClass[];
 export declare function inferGroupNames(sampleNames: string[]): string[];
