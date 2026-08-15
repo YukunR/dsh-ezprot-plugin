@@ -15,7 +15,7 @@ pnpm test      # vitest 单元测试（无需 R）
 开发安装（link 协议实时挂载进 profile）：
 
 ```powershell
-dsh plugin --profile web add "link:D:/ResearchProject/dsh-ezprot-plugin"
+dsh plugin --profile web add "link:<本仓库绝对路径>"
 ```
 
 - `link:` 协议是符号链接：改 `src/*.ts` 后只需 `pnpm build`（无需重装）；
@@ -66,7 +66,7 @@ node tests\e2e\env-fresh.mjs        # 全新机器安装模拟（干净 R + 空�
 | `enableInstall` | `true` | 是否允许自动安装 R/包 |
 | `defaultTimeoutMs` | `1800000` | 单步骤超时 |
 | `backend` | `auto` | `auto`（本地 R 优先，无 R 且检测到 Docker 时用镜像）/ `local` / `docker` |
-| `dockerImage` | `yukunru/ezprot:0.1.0-beta` | docker 后端使用的镜像 |
+| `dockerImage` | `yukunru/ezprot:latest` | docker 后端使用的镜像 |
 
 ## 规范约定
 
