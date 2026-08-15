@@ -386,6 +386,20 @@ export class ProteomicsService {
     return 'local'
   }
 
+  /**
+   * Verify the docker backend can actually run a step: the CLI must be
+   * present AND the image must already be pulled. Without this, `docker run`
+   * would implicitly pull (unbounded, no progress feed) and fail confusingly.
+   */
+  async assertDockerReady(image: string, dockerOk: boolean): Promise<void> {
+    if (!dockerOk) {
+      throw new Error('the docker backend was selected, but Docker is unavailable on this machine')
+    }
+    if (!(await this.runtime.dockerImageReady(image))) {
+      throw new Error(`docker image ${image} is not present on this machine — run proteomics_environment action=setup with backend=docker first (or switch the backend)`)
+    }
+  }
+
   // ── step execution ────────────────────────────────────────────────────────
   async runStep(opts: { projectDir: string; step: Step; rerun?: boolean; params?: PipelineParams; onLog?: LogSink }): Promise<string> {
     const { projectDir, step, rerun = false, params, onLog } = opts
@@ -406,14 +420,16 @@ export class ProteomicsService {
       const rscript = await this.runtime.detectRscript()
       const dockerOk = await this.dockerAvailable()
       const backend = await this.resolveBackend(rscript !== null, dockerOk)
+      const runtimeState = await this.runtime.getState()
+      const dockerImage = runtimeState.dockerImage ?? this.config.dockerImage ?? 'ezprot:latest'
       if (backend !== 'docker') {
         if (!rscript) throw new Error('no R installation found — run proteomics_environment action=setup first')
         const missing = await this.runtime.missingPackages(rscript, manifest)
         if (missing.length > 0) {
           throw new Error(`${missing.length} R package(s) missing (${missing.slice(0, 10).join(', ')}${missing.length > 10 ? '…' : ''}) — run proteomics_environment action=setup first`)
         }
-      } else if (!dockerOk) {
-        throw new Error(`the docker backend was selected, but Docker is unavailable on this machine`)
+      } else {
+        await this.assertDockerReady(dockerImage, dockerOk)
       }
       // backgrounds required by enrichment/gsea steps
       if (step === 'enrich' || step === 'gsea' || step === 'all') {
@@ -427,13 +443,12 @@ export class ProteomicsService {
       project.regenerateMainR(state)
       const log: LogSink = onLog ?? (() => {})
       const rStep = step === 'batch_remove' ? 'batch-removal' : step
-      const runtimeState = await this.runtime.getState()
       const res = await project.runStep(this.runtime, rStep, {
         rerun,
         timeoutMs: this.timeoutMs,
         onLog: log,
         backend,
-        dockerImage: runtimeState.dockerImage ?? this.config.dockerImage ?? 'ezprot:latest',
+        dockerImage,
       })
       if (res.timedOut) throw new Error(`step ${step} timed out after ${this.timeoutMs}ms`)
       if (res.code !== 0) {

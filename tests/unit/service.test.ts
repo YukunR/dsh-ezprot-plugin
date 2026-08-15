@@ -49,6 +49,24 @@ describe('resolveBackend', () => {
   })
 })
 
+describe('assertDockerReady', () => {
+  it('accepts a present CLI with a pulled image', async () => {
+    const svc = new ProteomicsService({})
+    svc.runtime.dockerImageReady = async () => true
+    await expect(svc.assertDockerReady('yukunru/ezprot:latest', true)).resolves.toBeUndefined()
+  })
+  it('rejects when the CLI is missing', async () => {
+    const svc = new ProteomicsService({})
+    svc.runtime.dockerImageReady = async () => true
+    await expect(svc.assertDockerReady('yukunru/ezprot:latest', false)).rejects.toThrow(/Docker is unavailable/)
+  })
+  it('rejects when the image has not been pulled', async () => {
+    const svc = new ProteomicsService({})
+    svc.runtime.dockerImageReady = async () => false
+    await expect(svc.assertDockerReady('yukunru/ezprot:latest', true)).rejects.toThrow(/not present on this machine/)
+  })
+})
+
 describe('formatSummary', () => {
   const svc = new ProteomicsService({})
 
