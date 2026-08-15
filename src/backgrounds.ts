@@ -175,7 +175,7 @@ export class Backgrounds {
     const output = this.goPath(organism)
     log(`downloading UniProt GO annotations for ${organism} (taxon ${org.taxon}) ...`)
     const url = 'https://rest.uniprot.org/uniprotkb/stream?compressed=false&fields=accession%2Cid%2Cgene_names%2Cgo_id%2Cgo&format=tsv&query=%28*%29+AND+%28model_organism%3A' + org.taxon + '%29+AND+%28reviewed%3Atrue%29'
-    await downloadFile(url, tsv, { retries: 2 })
+    await downloadFile(url, tsv, { retries: 2, timeoutMs: 20 * 60 * 1000 })
     log(`building GO background for ${organism} from ${tsv} ...`)
     const res = await runRscript(
       this.runtime,

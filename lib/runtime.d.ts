@@ -36,9 +36,10 @@ export interface RuntimeStatus {
 }
 export type LogSink = (chunk: string) => void;
 export declare function sleep(ms: number): Promise<void>;
-/** Download with redirects and retries. Returns the destination path. */
+/** Download with redirects, retries, and a per-attempt timeout. Returns the destination path. */
 export declare function downloadFile(url: string, dest: string, opts?: {
     retries?: number;
+    timeoutMs?: number;
 }): Promise<string>;
 export declare class Runtime {
     config: RuntimeConfig;
