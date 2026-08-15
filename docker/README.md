@@ -49,14 +49,14 @@ docker run --rm ezprot:latest Rscript /opt/ezprot/check_runtime.R /opt/ezprot/ma
 
 ## 3. 发布到镜像仓库（二选一）
 
-### 方式 A：Docker Hub
+### 方式 A：Docker Hub（本项目默认，镜像地址 `yukunru/ezprot`）
 
 ```powershell
 docker login                                        # 用你的 Docker Hub 账号
-docker tag ezprot:latest <你的用户名>/ezprot:0.1.0
-docker push <你的用户名>/ezprot:0.1.0
-docker tag ezprot:latest <你的用户名>/ezprot:latest
-docker push <你的用户名>/ezprot:latest
+docker tag ezprot:latest yukunru/ezprot:0.1.0
+docker push yukunru/ezprot:0.1.0
+docker tag ezprot:latest yukunru/ezprot:latest
+docker push yukunru/ezprot:latest
 ```
 
 ### 方式 B：GitHub Container Registry (GHCR)
@@ -89,7 +89,7 @@ docker buildx build --platform linux/amd64,linux/arm64 `
   config:
     enableInstall: true
     backend: auto          # auto: 本地 R 优先；无 R 且检测到 Docker 时用镜像
-    dockerImage: '<你的用户名>/ezprot:latest'   # 或 ghcr.io/<用户名>/ezprot:latest
+    dockerImage: 'yukunru/ezprot:latest'   # 插件默认值；换成 ghcr.io/<用户名>/ezprot:latest 可切 GHCR
 ```
 
 用户侧体验：`proteomics_environment action=status` 会报告 Docker 是否可用；
