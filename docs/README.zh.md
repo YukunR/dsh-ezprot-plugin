@@ -22,8 +22,6 @@ npx @deepseek-ai/dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
 dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
 ```
 
-git 直装首次会编译一次（pnpm 会提示允许构建脚本）：按提示在 `$DSH_HOME/profiles/web/pnpm-workspace.yaml` 的 `allowBuilds` 里加入 `dsh-ezprot-plugin`，然后重跑上面的安装命令。
-
 然后重启 `dsh web`。每个会话的 agent 都会获得 `proteomics_*` 工具。
 
 ## 使用
