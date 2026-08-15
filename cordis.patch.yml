@@ -10,5 +10,5 @@
       config:
         enableInstall: true
         backend: auto
-        dockerImage: 'yukunru/ezprot:0.1.0-beta'
+        dockerImage: 'yukunru/ezprot:latest'
         defaultTimeoutMs: 1800000
