@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Runtime, DEFAULT_DOCKER_IMAGE, type LogSink, type PackageManifest, type RuntimeStatus } from './runtime.js'
 import { Backgrounds, ORGANISMS, packageDir, type BackgroundStatus, type Organism } from './backgrounds.js'
-import { Project, preflight, writeGeneratedSampleInfo, type Comparison, type PipelineParams, type ProjectState } from './pipeline.js'
+import { Project, preflight, writeGeneratedSampleInfo, type Comparison, type PipelineParams } from './pipeline.js'
 import { inspectRawFile, tidyRawFile, type InspectResult, type TidyOptions } from './import.js'
 
 export const STEPS = ['normalization', 'pca', 'batch_remove', 'dea', 'enrich', 'gsea', 'all'] as const
@@ -455,7 +455,7 @@ export class ProteomicsService {
       if (res.code !== 0) {
         throw new Error(`step ${step} failed (exit ${res.code})\n${res.tail.slice(-4000)}`)
       }
-      const summary = await this.stepSummary(project, step, state)
+      const summary = await this.stepSummary(project, step)
       const lines = [`step ${step} OK (project: ${project.dir})`]
       lines.push(...this.formatSummary(step, summary))
       if (res.tail.trim().length > 0) {
@@ -465,7 +465,7 @@ export class ProteomicsService {
     })
   }
 
-  async stepSummary(project: Project, step: Step, _state: ProjectState): Promise<StepSummaryMap> {
+  async stepSummary(project: Project, step: Step): Promise<StepSummaryMap> {
     switch (step) {
       case 'normalization':
         return { normalization: await project.summarizeNormalization() }
@@ -539,7 +539,7 @@ export class ProteomicsService {
     const state = project.loadState()
     if (!state) throw new Error(`no project state at ${project.dir} — run proteomics_preflight first`)
     const status = await project.status()
-    const summary = await this.stepSummary(project, 'all', state)
+    const summary = await this.stepSummary(project, 'all')
     const lines: string[] = []
     lines.push(`project: ${project.dir}`)
     lines.push(`organism: ${state.organismName ?? state.organism}; comparisons: ${(state.comparisons ?? []).map(compNameLine).join('; ')}`)
