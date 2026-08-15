@@ -1,6 +1,6 @@
 // Runtime management: R discovery, managed R installation, package library
 // installation from mirrors, offline snapshot restore, health status.
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, createWriteStream } from 'node:fs'
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -65,6 +65,20 @@ export type LogSink = (chunk: string) => void
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Kill a spawned process when the signal aborts (no-op without a signal). */
+export function wireKillOnAbort(proc: ChildProcess, signal?: AbortSignal): void {
+  if (!signal) return
+  const onAbort = () => {
+    try { proc.kill() } catch { /* already dead */ }
+  }
+  if (signal.aborted) {
+    onAbort()
+    return
+  }
+  signal.addEventListener('abort', onAbort)
+  proc.on('close', () => signal.removeEventListener('abort', onAbort))
 }
 
 /** PATH lookup command + binary name for the current platform. */
@@ -223,7 +237,7 @@ export class Runtime {
   }
 
   /** Download and silently install the pinned R version into the managed dir (no admin). */
-  async installR(opts: { onLog?: LogSink } = {}): Promise<string> {
+  async installR(opts: { onLog?: LogSink; signal?: AbortSignal } = {}): Promise<string> {
     const log: LogSink = opts.onLog ?? (() => {})
     const installer = join(this.downloadsDir, `R-${R_VERSION}-win.exe`)
     const installDir = join(this.runtimeDir, `R-${R_VERSION}`)
@@ -253,6 +267,7 @@ export class Runtime {
       const proc = spawn(installer, ['/VERYSILENT', '/CURRENTUSER', `/DIR=${installDir}`, '/NORESTART', '/SUPPRESSMSGBOXES'], {
         windowsHide: true,
       })
+      wireKillOnAbort(proc, opts.signal)
       const timer = setTimeout(() => {
         try { proc.kill() } catch { /* already dead */ }
         reject(new Error('R installer timed out after 30 minutes'))
@@ -288,7 +303,7 @@ export class Runtime {
   }
 
   /** Install every manifest package that is missing from the managed library. */
-  async installPackages(rscript: string, manifest: PackageManifest, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<void> {
+  async installPackages(rscript: string, manifest: PackageManifest, opts: { onLog?: LogSink; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<void> {
     const log: LogSink = opts.onLog ?? (() => {})
     const timeoutMs = opts.timeoutMs ?? 45 * 60 * 1000
     mkdirSync(this.libraryDir, { recursive: true })
@@ -308,6 +323,7 @@ export class Runtime {
       env: { ...process.env, R_LIBS_USER: this.libraryDir },
       windowsHide: true,
     })
+    wireKillOnAbort(proc, opts.signal)
     let out = ''
     let err = ''
     proc.stdout.on('data', (d) => { out += d; log(d) })
@@ -345,7 +361,7 @@ export class Runtime {
    * heavy pipeline code paths (PCAtools encircle/ggalt, ComBat, enricher).
    * Catches Suggests-only gaps that static manifest checks cannot see.
    */
-  async verifyRuntime(rscript: string, manifest: PackageManifest, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<{ ok: boolean; failures: string[]; tail: string }> {
+  async verifyRuntime(rscript: string, manifest: PackageManifest, opts: { onLog?: LogSink; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<{ ok: boolean; failures: string[]; tail: string }> {
     const log: LogSink = opts.onLog ?? (() => {})
     const timeoutMs = opts.timeoutMs ?? 15 * 60 * 1000
     const runtimeManifest = {
@@ -360,6 +376,7 @@ export class Runtime {
       env: { ...process.env, R_LIBS_USER: this.libraryDir },
       windowsHide: true,
     })
+    wireKillOnAbort(proc, opts.signal)
     let out = ''
     let err = ''
     proc.stdout.on('data', (d) => { out += d; log(d) })
@@ -438,10 +455,11 @@ export class Runtime {
     }
   }
 
-  async dockerPull(image: string, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<void> {
+  async dockerPull(image: string, opts: { onLog?: LogSink; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<void> {
     const log: LogSink = opts.onLog ?? (() => {})
     const timeoutMs = opts.timeoutMs ?? 30 * 60 * 1000
     const proc = spawn('docker', ['pull', image], { windowsHide: true })
+    wireKillOnAbort(proc, opts.signal)
     let err = ''
     proc.stdout.on('data', (d) => log(d.toString()))
     proc.stderr.on('data', (d) => { err += d.toString(); log(d.toString()) })
@@ -459,10 +477,11 @@ export class Runtime {
   }
 
   /** Run the runtime probe INSIDE the image (the image carries check_runtime.R). */
-  async dockerVerify(image: string, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<{ ok: boolean; failures: string[] }> {
+  async dockerVerify(image: string, opts: { onLog?: LogSink; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<{ ok: boolean; failures: string[] }> {
     const log: LogSink = opts.onLog ?? (() => {})
     const timeoutMs = opts.timeoutMs ?? 20 * 60 * 1000
     const proc = spawn('docker', ['run', '--rm', image, 'Rscript', '/opt/ezprot/check_runtime.R', '/opt/ezprot/manifest-runtime.json'], { windowsHide: true })
+    wireKillOnAbort(proc, opts.signal)
     let out = ''
     let err = ''
     proc.stdout.on('data', (d) => { out += d.toString(); log(d.toString()) })
@@ -482,7 +501,7 @@ export class Runtime {
   }
 
   /** Extract a previously created offline snapshot zip into the managed runtime dir. */
-  async restoreSnapshot(snapshotPath: string, opts: { onLog?: LogSink; timeoutMs?: number } = {}): Promise<void> {
+  async restoreSnapshot(snapshotPath: string, opts: { onLog?: LogSink; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<void> {
     const log: LogSink = opts.onLog ?? (() => {})
     const timeoutMs = opts.timeoutMs ?? 20 * 60 * 1000
     if (!existsSync(snapshotPath)) throw new Error(`snapshot not found: ${snapshotPath}`)
@@ -498,6 +517,7 @@ export class Runtime {
       windowsHide: true,
       env: { ...process.env, EZPROT_SNAPSHOT_PATH: snapshotPath, EZPROT_DEST_DIR: this.runtimeDir },
     })
+    wireKillOnAbort(proc, opts.signal)
     let err = ''
     proc.stderr.on('data', (d) => { err += d; log(d) })
     const timedOut = await new Promise<boolean>((resolvePromise) => {
