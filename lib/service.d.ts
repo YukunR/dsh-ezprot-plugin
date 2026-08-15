@@ -1,6 +1,6 @@
 import { Runtime, type LogSink, type PackageManifest, type RuntimeStatus } from './runtime.js';
 import { Backgrounds, type BackgroundStatus, type Organism } from './backgrounds.js';
-import { Project, type Comparison, type PipelineParams, type ProjectState } from './pipeline.js';
+import { Project, type Comparison, type PipelineParams } from './pipeline.js';
 import { type InspectResult, type TidyOptions } from './import.js';
 export declare const STEPS: readonly ["normalization", "pca", "batch_remove", "dea", "enrich", "gsea", "all"];
 export type Step = (typeof STEPS)[number];
@@ -105,7 +105,7 @@ export declare class ProteomicsService {
         params?: PipelineParams;
         onLog?: LogSink;
     }): Promise<string>;
-    stepSummary(project: Project, step: Step, _state: ProjectState): Promise<StepSummaryMap>;
+    stepSummary(project: Project, step: Step): Promise<StepSummaryMap>;
     formatSummary(step: Step, summary: StepSummaryMap): string[];
     report(projectDir: string): Promise<string>;
 }

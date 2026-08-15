@@ -6,8 +6,6 @@ import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Readable } from 'node:stream'
-import { pipeline } from 'node:stream/promises'
 
 /** Plugin package root (one level above src/). */
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -46,7 +44,6 @@ export interface RuntimeConfig {
   defaultTimeoutMs?: number
   backend?: string
   dockerImage?: string
-  enableNetwork?: boolean
 }
 
 export interface PackageManifest {
@@ -129,7 +126,21 @@ export async function downloadFile(url: string, dest: string, opts: { retries?: 
       const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(timeoutMs) })
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
       await mkdir(dirname(dest), { recursive: true })
-      await pipeline(Readable.fromWeb(res.body as never), createWriteStream(dest))
+      // Manual pump from the web stream: Node's Readable.fromWeb typing does
+      // not line up with the fetch body stream across TS/DOM lib versions,
+      // so bridge the reader directly instead of casting types away.
+      const reader = res.body.getReader()
+      const out = createWriteStream(dest)
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        if (!out.write(value)) await new Promise<void>((resolve) => out.once('drain', resolve))
+      }
+      out.end()
+      await new Promise<void>((resolve, reject) => {
+        out.on('finish', resolve)
+        out.on('error', reject)
+      })
       return dest
     } catch (error) {
       lastError = error

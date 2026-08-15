@@ -4,12 +4,19 @@
 import { join } from 'node:path'
 import type {
   DefineToolOptions,
+  InferArgs,
   ParameterPropertySpec,
   ParameterSchemaSpec,
+  ToolRunContext,
 } from '@deepseek-ai/dsh-tools'
 import { STEPS, type EnvironmentReport, type ProteomicsService } from './service.js'
 
 type ToolDefinitionOptions = DefineToolOptions<ParameterSchemaSpec, any>
+
+/** Narrow a schema-inferred (JsonValue) optional string parameter. */
+function optStr(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : undefined
+}
 
 /** Structural image reference compatible with @deepseek-ai/dsh-attachment. */
 export interface ImageRefLike {
@@ -180,7 +187,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         snapshotPath: { type: 'string', description: 'Path to the offline snapshot zip (only for restore_snapshot).' },
       },
       output: textOutput,
-      execute: async (args: any, exec: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>, exec: ToolRunContext) => {
         const log = logCollector()
         const action = (args.action ?? 'status') as string
         const backend = (args.backend ?? 'local') as 'local' | 'docker'
@@ -199,7 +206,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
               run: () => {
                 const done = (async () => {
                   try {
-                    await service.environmentSetup({ action: 'setup', snapshotPath: args.snapshotPath, backend, signal: controller.signal, onLog: buf.push })
+                    await service.environmentSetup({ action: 'setup', snapshotPath: optStr(args.snapshotPath), backend, signal: controller.signal, onLog: buf.push })
                     // docker setup already verified in-container; local setup gets the host probe
                     const detail = backend === 'docker'
                       ? 'docker environment ready (verified in-container)'
@@ -222,12 +229,12 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
             ].join('\n')
           }
           // jobs registry unavailable: run inline (blocks, no progress feed)
-          const status = await guard(service.environmentSetup({ action: 'setup', snapshotPath: args.snapshotPath, backend, onLog: log.onLog }), log)
+          const status = await guard(service.environmentSetup({ action: 'setup', snapshotPath: optStr(args.snapshotPath), backend, onLog: log.onLog }), log)
           const probe = backend === 'docker' ? 'docker environment ready (verified in-container)' : await guard(service.verifyRuntimeReport(), log)
           return formatEnvironment(status) + '\n' + probe
         }
         if (action === 'restore_snapshot') {
-          const status = await guard(service.environmentSetup({ action: 'restore_snapshot', snapshotPath: args.snapshotPath, onLog: log.onLog }), log)
+          const status = await guard(service.environmentSetup({ action: 'restore_snapshot', snapshotPath: optStr(args.snapshotPath), onLog: log.onLog }), log)
           const probe = await guard(service.verifyRuntimeReport(), log)
           return formatEnvironment(status) + '\n' + probe
         }
@@ -245,7 +252,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         action: { type: 'string', enum: ['status', 'build'], description: 'status reports cache state; build ensures both files exist. Default status.' },
       },
       output: textOutput,
-      execute: async (args: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         if ((args.action ?? 'status') === 'build') {
           const result = await guard(service.backgroundEnsure(args.organism as 'human' | 'mouse' | 'rat', { onLog: log.onLog }), log)
@@ -273,10 +280,10 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         missingZero: { type: 'boolean', description: 'Treat 0 as missing (NaN). Default true (tidy only).' },
       },
       output: textOutput,
-      execute: async (args: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         if ((args.action ?? 'inspect') === 'inspect') {
-          const r = await guard(service.inspectRaw(String(args.inputFile), { sheet: args.sheet }), log)
+          const r = await guard(service.inspectRaw(String(args.inputFile), { sheet: optStr(args.sheet) }), log)
           const lines: string[] = []
           lines.push(`inspected ${r.file} — ${r.nRows} data rows, ${r.columns.length} columns`)
           if (r.sheets.length > 0) lines.push(`sheets: ${r.sheets.join(', ')}`)
@@ -293,12 +300,12 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         return guard(
           service.tidyRaw(String(args.inputFile), String(args.outputDir ?? ''), {
             idColumn: String(args.idColumn ?? ''),
-            geneColumn: args.geneColumn,
-            descColumn: args.descColumn,
+            geneColumn: optStr(args.geneColumn),
+            descColumn: optStr(args.descColumn),
             sampleColumns: (args.sampleColumns as string[]) ?? [],
             groupMapping: args.groupMapping as Record<string, string> | undefined,
             missingZero: args.missingZero !== false,
-            sheet: args.sheet,
+            sheet: optStr(args.sheet),
           }),
           log,
         )
@@ -317,7 +324,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         params: { type: 'object', additionalProperties: false, properties: sharedParams, description: 'Optional pipeline parameter overrides (defaults are sensible).' },
       },
       output: textOutput,
-      execute: async (args: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         return guard(
           service.preflightProject({
@@ -341,7 +348,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         comparisons: { ...comparisonSchema, description: 'Confirmed comparisons, e.g. [{"control":"HC","treatment":"HD","name":"HD_vs_HC"}].', required: true },
       },
       output: textOutput,
-      execute: async (args: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         return guard(service.setComparisons(String(args.projectDir), args.comparisons as never), log)
       },
@@ -357,7 +364,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         mapping: { type: 'object', additionalProperties: true, description: 'Sample → batch label mapping (action=set), e.g. {"NC_1":"1","HC_1":"2"}. Missing samples keep their current value.' },
       },
       output: textOutput,
-      execute: async (args: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         const action = (args.action ?? 'list') as string
         if (action === 'set') {
@@ -381,7 +388,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         params: { type: 'object', additionalProperties: false, properties: sharedParams, description: 'Parameter overrides merged into the project for this and later steps.' },
       },
       output: stepOutput,
-      execute: async (args: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         const projectDir = String(args.projectDir)
         const step = args.step as never
@@ -407,7 +414,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
         projectDir: { type: 'string', description: 'Project directory (absolute path).', required: true },
       },
       output: textOutput,
-      execute: async (args: any) => {
+      execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         return guard(service.report(String(args.projectDir)), log)
       },

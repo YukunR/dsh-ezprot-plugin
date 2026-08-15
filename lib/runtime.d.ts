@@ -22,7 +22,6 @@ export interface RuntimeConfig {
     defaultTimeoutMs?: number;
     backend?: string;
     dockerImage?: string;
-    enableNetwork?: boolean;
 }
 export interface PackageManifest {
     rVersion?: string;

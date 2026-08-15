@@ -352,7 +352,10 @@ export class Project {
         timedOut = true
         try { proc.kill() } catch { /* already dead */ }
       }, timeoutMs)
-      proc.on('error', reject)
+      proc.on('error', (error) => {
+        clearTimeout(timer)
+        reject(error)
+      })
       proc.on('close', (c: number | null) => {
         clearTimeout(timer)
         resolvePromise(c)
