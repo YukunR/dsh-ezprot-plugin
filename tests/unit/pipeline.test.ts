@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { parseCsv, rComparisons, rEscape, rLogical, rNaThreshold, rNumber, rString, rVector } from '../../src/pipeline.js'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { parseCsv, preflight, rComparisons, rEscape, rLogical, rNaThreshold, rNumber, rString, rVector } from '../../src/pipeline.js'
+
+async function withMatrix(content: string, fn: (file: string) => Promise<void>): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), 'ezprot-pf-'))
+  const file = join(dir, 'origin_data.txt')
+  try {
+    writeFileSync(file, content, 'utf8')
+    await fn(file)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
 
 describe('rEscape / rString', () => {
   it('doubles backslashes for R string content', () => {
@@ -82,5 +96,34 @@ describe('parseCsv', () => {
   })
   it('returns [] for empty input', () => {
     expect(parseCsv('')).toEqual([])
+  })
+})
+
+describe('preflight', () => {
+  it('flags non-numeric columns that would be treated as samples', async () => {
+    await withMatrix([
+      'Accession\tGeneName\tDescription\tNC_1\tNC_2\tReverse\tPotential contaminant',
+      'P1\tG1\tdesc one\t10.5\t11.2\t+\t+',
+      'P2\tG2\tdesc two\t8.1\tNaN\t\t',
+      'P3\tG3\tdesc three\t9.0\t9.5\t+\t',
+      '',
+    ].join('\n'), async (file) => {
+      const qc = await preflight(file, null)
+      expect(qc.nonNumericSampleColumns).toEqual(['Reverse', 'Potential contaminant'])
+      expect(qc.sampleColumns).toEqual(['NC_1', 'NC_2', 'Reverse', 'Potential contaminant'])
+      expect(qc.nProteins).toBe(3)
+    })
+  })
+  it('accepts fully numeric sample columns without flags', async () => {
+    await withMatrix([
+      'Accession\tGeneName\tDescription\tNC_1\tNC_2\tHC_1',
+      'P1\tG1\tdesc1\t10.5\t11.2\t12.1',
+      'P2\tG2\tdesc2\t8.1\tNaN\t7.9',
+      '',
+    ].join('\n'), async (file) => {
+      const qc = await preflight(file, null)
+      expect(qc.nonNumericSampleColumns).toEqual([])
+      expect(qc.nSamples).toBe(3)
+    })
   })
 })

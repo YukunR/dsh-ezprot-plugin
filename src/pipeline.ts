@@ -7,6 +7,7 @@ import { copyFile, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { LogSink, Runtime } from './runtime.js'
+import { looksNumeric } from './import.js'
 
 export const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const rDir = join(packageDir, 'r')
@@ -526,6 +527,8 @@ export interface PreflightResult {
   nSamples: number
   sampleColumns: string[]
   metaColumns: string[]
+  /** Non-meta columns whose values are mostly non-numeric (e.g. MaxQuant "Reverse" flags). */
+  nonNumericSampleColumns: string[]
   inferredGroups: string[]
   duplicateAccessions: number
   naBuckets: { none: number; low: number; mid: number; high: number }
@@ -545,6 +548,15 @@ export async function preflight(proteinFile: string, sampleInfoFile: string | nu
   const sampleCols = header.filter((c) => !metaCols.includes(c))
   const dataRows = lines.slice(1).filter((l) => l.trim() !== '')
   const nProteins = dataRows.length
+
+  // Flag non-numeric columns that are being treated as samples: MaxQuant/PD
+  // matrices commonly carry "Reverse", "Potential contaminant", "MS/MS count"
+  // columns that must not feed the pipeline as samples.
+  const nonNumericSampleColumns = sampleCols.filter((c) => {
+    const idx = header.indexOf(c)
+    const values = dataRows.map((l) => (l.split('\t')[idx] ?? '').trim())
+    return looksNumeric(values) < 0.8
+  })
 
   // NA statistics + duplicates
   const naBuckets = { none: 0, low: 0, mid: 0, high: 0 }
@@ -599,6 +611,7 @@ export async function preflight(proteinFile: string, sampleInfoFile: string | nu
     nSamples: sampleCols.length,
     sampleColumns: sampleCols,
     metaColumns: metaCols,
+    nonNumericSampleColumns,
     inferredGroups,
     duplicateAccessions: duplicateCount,
     naBuckets,
