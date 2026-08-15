@@ -8,6 +8,8 @@ No R, no Docker, no terminal knowledge required: the plugin detects or silently 
 
 ## Install
 
+Prerequisites: Node.js (bundles `npx`) and pnpm — `npm install -g pnpm`.
+
 Requires the [`dsh`](https://github.com/deepseek-ai/deepseek-harness) CLI (Windows / macOS / Linux), one command:
 
 ```bash
@@ -19,6 +21,8 @@ If `dsh` is already installed globally, drop the `npx @deepseek-ai/` prefix:
 ```bash
 dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
 ```
+
+The git install compiles once on first use (pnpm will ask to allow the build script): add `dsh-ezprot-plugin` to `allowBuilds` in `$DSH_HOME/profiles/web/pnpm-workspace.yaml` as prompted, then re-run the install command.
 
 Then restart `dsh web`. Every session's agent gains the `proteomics_*` tools.
 
