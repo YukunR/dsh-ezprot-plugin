@@ -47,6 +47,7 @@ export declare class ProteomicsService {
         snapshotPath?: string;
         backend?: 'local' | 'docker';
         onLog?: LogSink;
+        signal?: AbortSignal;
     }): Promise<EnvironmentReport>;
     backgroundEnsure(organism: Organism, opts?: {
         onLog?: LogSink;
@@ -77,7 +78,9 @@ export declare class ProteomicsService {
         sheet?: string;
     }): Promise<InspectResult>;
     /** Deep runtime check: missing packages + heavy-path capability probe. */
-    verifyRuntimeReport(): Promise<string>;
+    verifyRuntimeReport(opts?: {
+        signal?: AbortSignal;
+    }): Promise<string>;
     /** Tidy a raw biologist file into the canonical matrix + sample info. */
     tidyRaw(inputFile: string, outputDir: string, opts: TidyOptions): Promise<string>;
     /** PNG files produced by a step, for chat display (project-relative). */

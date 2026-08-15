@@ -191,6 +191,7 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
           const jobs = getJobs?.()
           if (jobs) {
             const buf = ringBuffer()
+            const controller = new AbortController()
             const jobId = jobs.start({
               kind: 'ezprot-setup',
               label: `ezprot environment setup (${backend})`,
@@ -198,17 +199,20 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
               run: () => {
                 const done = (async () => {
                   try {
-                    await service.environmentSetup({ action: 'setup', snapshotPath: args.snapshotPath, backend, onLog: buf.push })
+                    await service.environmentSetup({ action: 'setup', snapshotPath: args.snapshotPath, backend, signal: controller.signal, onLog: buf.push })
                     // docker setup already verified in-container; local setup gets the host probe
                     const detail = backend === 'docker'
                       ? 'docker environment ready (verified in-container)'
-                      : (await service.verifyRuntimeReport()).replace(/\r?\n/g, '; ')
+                      : (await service.verifyRuntimeReport({ signal: controller.signal })).replace(/\r?\n/g, '; ')
                     return { status: 'completed' as const, detail }
                   } catch (error) {
+                    if (controller.signal.aborted) {
+                      return { status: 'killed' as const, detail: 'cancelled by user' }
+                    }
                     return { status: 'failed' as const, detail: error instanceof Error ? error.message.slice(0, 500) : String(error) }
                   }
                 })()
-                return { cancel: () => {}, done, readOutput: buf.drain }
+                return { cancel: () => controller.abort(), done, readOutput: buf.drain }
               },
             })
             return [

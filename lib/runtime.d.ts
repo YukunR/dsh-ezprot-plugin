@@ -1,3 +1,4 @@
+import { type ChildProcess } from 'node:child_process';
 export declare const R_VERSION = "4.4.0";
 export declare const BIOC_VERSION = "3.20";
 export declare const DEFAULT_MIRRORS: {
@@ -36,6 +37,8 @@ export interface RuntimeStatus {
 }
 export type LogSink = (chunk: string) => void;
 export declare function sleep(ms: number): Promise<void>;
+/** Kill a spawned process when the signal aborts (no-op without a signal). */
+export declare function wireKillOnAbort(proc: ChildProcess, signal?: AbortSignal): void;
 /** PATH lookup command + binary name for the current platform. */
 export declare function pathLookupCommand(): {
     cmd: string;
@@ -76,6 +79,7 @@ export declare class Runtime {
     /** Download and silently install the pinned R version into the managed dir (no admin). */
     installR(opts?: {
         onLog?: LogSink;
+        signal?: AbortSignal;
     }): Promise<string>;
     /** Names of packages currently installed in the managed library. */
     installedPackages(rscript: string): Promise<string[]>;
@@ -83,6 +87,7 @@ export declare class Runtime {
     installPackages(rscript: string, manifest: PackageManifest, opts?: {
         onLog?: LogSink;
         timeoutMs?: number;
+        signal?: AbortSignal;
     }): Promise<void>;
     /** Missing manifest packages (empty = complete library). */
     missingPackages(rscript: string, manifest: PackageManifest): Promise<string[]>;
@@ -94,6 +99,7 @@ export declare class Runtime {
     verifyRuntime(rscript: string, manifest: PackageManifest, opts?: {
         onLog?: LogSink;
         timeoutMs?: number;
+        signal?: AbortSignal;
     }): Promise<{
         ok: boolean;
         failures: string[];
@@ -115,11 +121,13 @@ export declare class Runtime {
     dockerPull(image: string, opts?: {
         onLog?: LogSink;
         timeoutMs?: number;
+        signal?: AbortSignal;
     }): Promise<void>;
     /** Run the runtime probe INSIDE the image (the image carries check_runtime.R). */
     dockerVerify(image: string, opts?: {
         onLog?: LogSink;
         timeoutMs?: number;
+        signal?: AbortSignal;
     }): Promise<{
         ok: boolean;
         failures: string[];
@@ -128,6 +136,7 @@ export declare class Runtime {
     restoreSnapshot(snapshotPath: string, opts?: {
         onLog?: LogSink;
         timeoutMs?: number;
+        signal?: AbortSignal;
     }): Promise<void>;
     /** Full environment health report. */
     status(manifest?: PackageManifest): Promise<RuntimeStatus>;

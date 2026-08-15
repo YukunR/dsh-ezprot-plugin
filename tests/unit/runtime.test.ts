@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createServer } from 'node:http'
 import { spawnSync } from 'node:child_process'
+import { EventEmitter } from 'node:events'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { candidateScriptPaths, downloadFile, pathLookupCommand, Runtime } from '../../src/runtime.js'
+import { candidateScriptPaths, downloadFile, pathLookupCommand, Runtime, wireKillOnAbort } from '../../src/runtime.js'
 
 const cleanups: Array<() => Promise<void>> = []
 afterEach(async () => {
@@ -49,6 +50,41 @@ describe('candidateScriptPaths', () => {
     expect(list.some((c) => c.path === '/usr/bin/Rscript')).toBe(true)
     expect(list.some((c) => c.path === '/opt/homebrew/bin/Rscript')).toBe(true)
     expect(list.some((c) => c.path === '/opt/R' && c.directory)).toBe(true)
+  })
+})
+
+describe('wireKillOnAbort', () => {
+  function mockProc() {
+    const proc = new EventEmitter()
+    return Object.assign(proc, { kill: vi.fn() }) as unknown as import('node:child_process').ChildProcess
+  }
+
+  it('kills the process when the signal aborts', () => {
+    const proc = mockProc()
+    const controller = new AbortController()
+    wireKillOnAbort(proc, controller.signal)
+    controller.abort()
+    expect(proc.kill).toHaveBeenCalled()
+  })
+  it('kills immediately when the signal is already aborted', () => {
+    const proc = mockProc()
+    const controller = new AbortController()
+    controller.abort()
+    wireKillOnAbort(proc, controller.signal)
+    expect(proc.kill).toHaveBeenCalled()
+  })
+  it('removes the listener once the process closes', () => {
+    const proc = mockProc()
+    const controller = new AbortController()
+    wireKillOnAbort(proc, controller.signal)
+    proc.emit('close', 0)
+    controller.abort()
+    expect(proc.kill).not.toHaveBeenCalled()
+  })
+  it('does nothing without a signal', () => {
+    const proc = mockProc()
+    wireKillOnAbort(proc, undefined)
+    expect(proc.kill).not.toHaveBeenCalled()
   })
 })
 
