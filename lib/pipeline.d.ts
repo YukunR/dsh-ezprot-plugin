@@ -1,4 +1,4 @@
-import type { LogSink, Runtime } from './runtime.js';
+import { type LogSink, type Runtime } from './runtime.js';
 export declare const packageDir: string;
 export interface Comparison {
     control: string | string[];

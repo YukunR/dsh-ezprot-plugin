@@ -6,7 +6,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node
 import { copyFile, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { LogSink, Runtime } from './runtime.js'
+import { DEFAULT_DOCKER_IMAGE, type LogSink, type Runtime } from './runtime.js'
 import { looksNumeric } from './import.js'
 
 export const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -324,7 +324,7 @@ export class Project {
         '-w', '/workspace',
         '-v', `${this.dir}:/workspace`,
         '-v', `${toHostPath(join(runtime.dataDir, 'backgrounds'))}:${toHostPath(join(runtime.dataDir, 'backgrounds'))}`,
-        opts.dockerImage ?? 'ezprot:latest',
+        opts.dockerImage ?? DEFAULT_DOCKER_IMAGE,
         '/workspace/run.R', ...stepArgs,
       ], { windowsHide: true })
     } else {

@@ -4,7 +4,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { Runtime, type LogSink, type PackageManifest, type RuntimeStatus } from './runtime.js'
+import { Runtime, DEFAULT_DOCKER_IMAGE, type LogSink, type PackageManifest, type RuntimeStatus } from './runtime.js'
 import { Backgrounds, ORGANISMS, packageDir, type BackgroundStatus, type Organism } from './backgrounds.js'
 import { Project, preflight, writeGeneratedSampleInfo, type Comparison, type PipelineParams, type ProjectState } from './pipeline.js'
 import { inspectRawFile, tidyRawFile, type InspectResult, type TidyOptions } from './import.js'
@@ -97,7 +97,7 @@ export class ProteomicsService {
     const orgs: Record<string, BackgroundStatus> = {}
     for (const org of Object.keys(ORGANISMS)) orgs[org] = this.backgrounds.status(org as Organism)
     const docker = await this.dockerAvailable()
-    return { ...status, dockerAvailable: docker, dockerImage: this.config.dockerImage ?? 'ezprot:latest', organisms: orgs, dataDir: this.runtime.dataDir }
+    return { ...status, dockerAvailable: docker, dockerImage: this.config.dockerImage ?? DEFAULT_DOCKER_IMAGE, organisms: orgs, dataDir: this.runtime.dataDir }
   }
 
   async environmentSetup(opts: { action?: 'status' | 'setup' | 'verify' | 'restore_snapshot'; snapshotPath?: string; backend?: 'local' | 'docker'; onLog?: LogSink; signal?: AbortSignal } = {}): Promise<EnvironmentReport> {
@@ -112,7 +112,7 @@ export class ProteomicsService {
       if (!status.dockerAvailable) {
         throw new Error('Docker is not available on this machine — install Docker first, or use backend=local for the managed R install')
       }
-      const image = this.config.dockerImage ?? 'ezprot:latest'
+      const image = this.config.dockerImage ?? DEFAULT_DOCKER_IMAGE
       if (!(await this.runtime.dockerImageReady(image))) {
         log(`pulling ${image} (one-time, a few minutes) ...`)
         await this.runtime.dockerPull(image, { onLog, signal })
@@ -422,7 +422,7 @@ export class ProteomicsService {
       const dockerOk = await this.dockerAvailable()
       const backend = await this.resolveBackend(rscript !== null, dockerOk)
       const runtimeState = await this.runtime.getState()
-      const dockerImage = runtimeState.dockerImage ?? this.config.dockerImage ?? 'ezprot:latest'
+      const dockerImage = runtimeState.dockerImage ?? this.config.dockerImage ?? DEFAULT_DOCKER_IMAGE
       if (backend !== 'docker') {
         if (!rscript) throw new Error('no R installation found — run proteomics_environment action=setup first')
         const missing = await this.runtime.missingPackages(rscript, manifest)
