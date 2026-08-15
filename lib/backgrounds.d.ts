@@ -12,6 +12,13 @@ export interface RRunResult {
     timedOut: boolean;
     tail: string;
 }
+export interface BackgroundBuildOptions {
+    onLog?: LogSink;
+    /** 'docker' runs the build inside the ezprot image (host-sandbox safe). */
+    backend?: 'local' | 'docker';
+    dockerImage?: string;
+    signal?: AbortSignal;
+}
 /** Run an R script with the managed library, streaming output to onLog. */
 export declare function runRscript(runtime: Runtime, args: string[], opts?: {
     cwd?: string;
@@ -36,18 +43,22 @@ export declare class Backgrounds {
     status(organism: Organism): BackgroundStatus;
     /**
      * Make both backgrounds available for the organism: reuse the cache,
-     * otherwise build from the network (once per organism).
+     * otherwise build from the network (once per organism). backend 'docker'
+     * builds inside the ezprot image, which works even when the host process
+     * runs in a network-restricted sandbox.
      */
-    ensure(organism: Organism, opts?: {
-        onLog?: LogSink;
-    }): Promise<{
+    ensure(organism: Organism, opts?: BackgroundBuildOptions): Promise<{
         go: string;
         kegg: string;
     }>;
-    buildKegg(organism: Organism, opts?: {
-        onLog?: LogSink;
-    }): Promise<void>;
-    buildGo(organism: Organism, opts?: {
-        onLog?: LogSink;
-    }): Promise<void>;
+    buildKegg(organism: Organism, opts?: BackgroundBuildOptions): Promise<void>;
+    buildGo(organism: Organism, opts?: BackgroundBuildOptions): Promise<void>;
+    /**
+     * Run a background script inside the ezprot image: bind-mount the shipped
+     * background scripts (read-only usage) and the organism cache dir (mapped to
+     * its drive-less host path, matching toContainerPath).
+     */
+    private runInDocker;
 }
+/** R expression that downloads `url` to `dest` inside the container. */
+export declare function rDownloadCommand(url: string, dest: string): string;

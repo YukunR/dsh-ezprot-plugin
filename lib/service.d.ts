@@ -49,8 +49,16 @@ export declare class ProteomicsService {
         onLog?: LogSink;
         signal?: AbortSignal;
     }): Promise<EnvironmentReport>;
+    /**
+     * Make both annotation backgrounds available. When no backend is given,
+     * resolve it the usual way (config → persisted state → auto), so the
+     * proteomics_background tool builds inside the docker image on
+     * network-restricted sandboxes where the host process cannot do TLS.
+     */
     backgroundEnsure(organism: Organism, opts?: {
         onLog?: LogSink;
+        backend?: 'local' | 'docker';
+        dockerImage?: string;
     }): Promise<{
         go: string;
         kegg: string;
