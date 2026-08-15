@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ProteomicsService, STEPS } from '../../src/service.js'
@@ -43,6 +43,37 @@ describe('resolveBackend', () => {
       const svc = new ProteomicsService({ dataDir: dir })
       await svc.runtime.setState({ backend: 'docker' })
       await expect(svc.resolveBackend(true, false)).rejects.toThrow(/Docker is not available/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('preflightProject', () => {
+  it('completes with a generated sample_info.txt and survives a re-run on the same project', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ezprot-proj-'))
+    try {
+      const matrix = join(dir, 'matrix.txt')
+      writeFileSync(matrix, [
+        'Accession\tGeneName\tDescription\tNC_1\tNC_2',
+        'P1\tG1\td1\t10.5\t11.2',
+        'P2\tG2\td2\t8.1\tNaN',
+        '',
+      ].join('\n'), 'utf8')
+      const svc = new ProteomicsService({ dataDir: join(dir, 'ds') })
+      const projectDir = join(dir, 'proj')
+      const out = await svc.preflightProject({ projectDir, proteinFile: matrix, organism: 'mouse' })
+      expect(out).toContain('preflight OK')
+      expect(out).toContain('sample_info.txt generated')
+      // Re-run on the same project: its own origin_data.txt/sample_info.txt
+      // are passed back in, so create() must not copy files onto themselves.
+      const again = await svc.preflightProject({
+        projectDir,
+        proteinFile: join(projectDir, 'data', 'origin_data.txt'),
+        sampleInfoFile: join(projectDir, 'data', 'sample_info.txt'),
+        organism: 'mouse',
+      })
+      expect(again).toContain('preflight OK')
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
