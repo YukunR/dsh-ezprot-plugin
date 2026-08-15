@@ -1,9 +1,9 @@
 # ezprot Docker 镜像：构建与发布
 
 镜像 = R 4.4.0 + `manifest/packages.json` 的全部依赖。镜像内运行插件自己的
-`install_packages.R` 与 `check_runtime.R`（清单即单一事实源），**构建完成即通过
-运行时探针**，否则 build 直接失败。发布后用户 `docker pull` 成品，使用侧完全
-不再依赖 CRAN/Bioc 镜像质量。
+`r/setup/install_packages.R` 与 `r/setup/check_runtime.R`（清单即单一事实源），
+**构建完成即通过运行时探针**，否则 build 直接失败。发布后用户 `docker pull`
+成品，使用侧完全不再依赖 CRAN/Bioc 镜像质量。
 
 ## 1. 本地构建（在装有 Docker 的机器上）
 
@@ -19,7 +19,7 @@ docker build -t ezprot:latest -f docker/Dockerfile .
 > 自动切换），**日期固定在 2024-11-15**（Bioc 3.20 同期快照——PPM 的
 > `latest` 已转向 R ≥ 4.5，会与 Bioc 3.20 的 ggtree 等冲突）；Bioc 3.20 包走
 > Westlake Bioc 镜像源码编译（r-ver 自带 gcc）；已归档的 gghalves/ggalt 走
-> Westlake CRAN archive。全部在 `install_packages.R` 内按平台自动选择，
+> Westlake CRAN archive。全部在 `r/setup/install_packages.R` 内按平台自动选择，
 > Windows/macOS 路径不变。
 >
 > 若 Docker Hub 拉取基础镜像不稳定，可换镜像站构建：
@@ -33,7 +33,7 @@ docker build -t ezprot:latest -f docker/Dockerfile .
 >
 > 若构建日志出现 `rspm-sync.rstudio.com` 的 “Couldn't resolve host name”
 > （PPM 二进制实际由该 CDN 主机提供，部分网络的容器 DNS 解析抖动），可把
-> 该主机钉到已知 IPv4 再构建（`install_packages.R` 内置重试 + Westlake 源码
+> 该主机钉到已知 IPv4 再构建（`r/setup/install_packages.R` 内置重试 + Westlake 源码
 > 回退，即使个别包失败也会自动收敛）：
 > ```powershell
 > docker build --add-host rspm-sync.rstudio.com:18.64.122.75 -t ezprot:latest -f docker/Dockerfile .
