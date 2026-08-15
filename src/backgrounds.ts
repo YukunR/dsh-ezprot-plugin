@@ -1,8 +1,8 @@
-// Annotation background management: per-organism GO/KEGG background cache,
-// shipped mouse backgrounds, and on-demand builds (KEGG REST + UniProt) that
-// run once per organism and are then reused forever.
+// Annotation background management: per-organism GO/KEGG background cache.
+// Every organism (human/mouse/rat) is built once on demand from KEGG REST +
+// UniProt and then reused forever; no backgrounds ship with the plugin.
 import { spawn } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { downloadFile, type LogSink, type Runtime } from './runtime.js'
@@ -75,21 +75,17 @@ export interface BackgroundStatus {
   organism: string
   go: boolean
   kegg: boolean
-  shippedGo: boolean
-  shippedKegg: boolean
   cacheDir: string
 }
 
 export class Backgrounds {
   runtime: Runtime
   cacheDir: string
-  shippedDir: string
   enableNetwork: boolean
 
   constructor(runtime: Runtime, config: { enableNetwork?: boolean } = {}) {
     this.runtime = runtime
     this.cacheDir = join(runtime.dataDir, 'backgrounds')
-    this.shippedDir = join(packageDir, 'data', 'backgrounds')
     this.enableNetwork = config.enableNetwork !== false
   }
 
@@ -102,36 +98,22 @@ export class Backgrounds {
   }
 
   status(organism: Organism): BackgroundStatus {
-    const shipped = existsSync(join(this.shippedDir, organism, 'go_background.csv'))
     return {
       organism,
       go: existsSync(this.goPath(organism)),
       kegg: existsSync(this.keggPath(organism)),
-      shippedGo: shipped,
-      shippedKegg: existsSync(join(this.shippedDir, organism, 'kegg_background.txt')),
       cacheDir: join(this.cacheDir, organism),
     }
   }
 
   /**
-   * Make both backgrounds available for the organism: prefer shipped files,
-   * then cache; otherwise build from the network (once per organism).
+   * Make both backgrounds available for the organism: reuse the cache,
+   * otherwise build from the network (once per organism).
    */
   async ensure(organism: Organism, opts: { onLog?: LogSink } = {}): Promise<{ go: string; kegg: string }> {
     const log: LogSink = opts.onLog ?? (() => {})
     if (!ORGANISMS[organism]) throw new Error(`unknown organism '${organism}' (supported: ${Object.keys(ORGANISMS).join(', ')})`)
     mkdirSync(join(this.cacheDir, organism), { recursive: true })
-    for (const [shippedName, cacheName] of [
-      ['go_background.csv', 'go_background.csv'],
-      ['kegg_background.txt', 'kegg_background.txt'],
-    ]) {
-      const shipped = join(this.shippedDir, organism, shippedName)
-      const cache = join(this.cacheDir, organism, cacheName)
-      if (!existsSync(cache) && existsSync(shipped)) {
-        cpSync(shipped, cache)
-        log(`using shipped ${organism} background: ${cacheName}`)
-      }
-    }
     const needKegg = !existsSync(this.keggPath(organism))
     const needGo = !existsSync(this.goPath(organism))
     if (needKegg) {

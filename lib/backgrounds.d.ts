@@ -22,14 +22,11 @@ export interface BackgroundStatus {
     organism: string;
     go: boolean;
     kegg: boolean;
-    shippedGo: boolean;
-    shippedKegg: boolean;
     cacheDir: string;
 }
 export declare class Backgrounds {
     runtime: Runtime;
     cacheDir: string;
-    shippedDir: string;
     enableNetwork: boolean;
     constructor(runtime: Runtime, config?: {
         enableNetwork?: boolean;
@@ -38,8 +35,8 @@ export declare class Backgrounds {
     keggPath(organism: Organism): string;
     status(organism: Organism): BackgroundStatus;
     /**
-     * Make both backgrounds available for the organism: prefer shipped files,
-     * then cache; otherwise build from the network (once per organism).
+     * Make both backgrounds available for the organism: reuse the cache,
+     * otherwise build from the network (once per organism).
      */
     ensure(organism: Organism, opts?: {
         onLog?: LogSink;
