@@ -62,3 +62,8 @@ export declare class Backgrounds {
 }
 /** R expression that downloads `url` to `dest` inside the container. */
 export declare function rDownloadCommand(url: string, dest: string): string;
+/**
+ * Script path for a background build: host path for local R, container path
+ * (/opt/ezprot-bg, where runInDocker bind-mounts the scripts dir) for docker.
+ */
+export declare function backgroundScriptPath(name: string, backend: 'local' | 'docker'): string;
