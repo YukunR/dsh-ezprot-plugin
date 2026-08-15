@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # Verify a date-pinned PPM binary snapshot works with R 4.4.0 / Bioc 3.20.
-# Run: docker run --rm -v <repo>/docker:/diag <R_BASE> Rscript /diag/diag_linux.R
+# Run: docker run --rm -v <repo>/scripts:/diag <R_BASE> Rscript /diag/diag-linux.R
 snap <- "https://packagemanager.posit.co/cran/__linux__/jammy/2024-11-15"
 cat("R:", R.version.string, "\n")
 want <- c("ggplot2", "dplyr", "tidyverse", "car", "Deriv", "doBy", "pbkrtest",

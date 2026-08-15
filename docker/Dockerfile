@@ -19,8 +19,8 @@ ENV R_LIBS=/opt/ezprot-lib \
 
 COPY manifest/packages.json /opt/ezprot/manifest.json
 COPY docker/manifest-runtime.json /opt/ezprot/manifest-runtime.json
-COPY r/install_packages.R /opt/ezprot/install_packages.R
-COPY r/check_runtime.R /opt/ezprot/check_runtime.R
+COPY r/setup/install_packages.R /opt/ezprot/install_packages.R
+COPY r/setup/check_runtime.R /opt/ezprot/check_runtime.R
 
 # System libraries for the R installs. r-ver is deliberately minimal: the
 # Posit PPM Linux binaries link system libs at runtime (fs -> libuv1,
