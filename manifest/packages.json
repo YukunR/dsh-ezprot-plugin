@@ -32,7 +32,9 @@
     "optparse",
     "BiocManager",
     "readxl",
-    "remotes"
+    "remotes",
+    "png",
+    "ape"
   ],
   "bioc": [
     "PCAtools",
@@ -43,7 +45,8 @@
     "fgsea",
     "qvalue",
     "GO.db",
-    "AnnotationDbi"
+    "AnnotationDbi",
+    "UCSC.utils"
   ],
   "backgroundBuildOnly": {
     "comment": "Only needed when building annotation backgrounds for a NEW organism; enrichment/GSEA at runtime use local files and never touch the network.",
