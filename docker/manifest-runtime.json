@@ -13,6 +13,7 @@
   "biocVersion": "3.20",
   "repos": {
     "cran": "https://mirrors.westlake.edu.cn/CRAN",
-    "bioc": "https://mirrors.westlake.edu.cn/bioconductor"
+    "bioc": "https://mirrors.westlake.edu.cn/bioconductor",
+    "linuxBinaryCran": "https://packagemanager.posit.co/cran/__linux__/jammy/2024-11-15"
   }
 }

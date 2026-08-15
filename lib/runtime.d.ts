@@ -8,6 +8,7 @@ export declare const DEFAULT_MIRRORS: {
     fallbackBioc: string;
     fallbackRBase: string;
 };
+export declare const LINUX_BINARY_CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/2024-11-15";
 export interface RuntimeConfig {
     dataDir?: string;
     libraryDir?: string;
