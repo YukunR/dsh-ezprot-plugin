@@ -26,6 +26,10 @@
     "test": "vitest run"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YukunR/dsh-ezprot-plugin.git"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
