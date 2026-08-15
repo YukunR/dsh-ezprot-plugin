@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { createServer } from 'node:http'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { spawnSync } from 'node:child_process'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { candidateScriptPaths, downloadFile, pathLookupCommand } from '../../src/runtime.js'
+import { candidateScriptPaths, downloadFile, pathLookupCommand, Runtime } from '../../src/runtime.js'
 
 const cleanups: Array<() => Promise<void>> = []
 afterEach(async () => {
@@ -49,6 +50,29 @@ describe('candidateScriptPaths', () => {
     expect(list.some((c) => c.path === '/opt/homebrew/bin/Rscript')).toBe(true)
     expect(list.some((c) => c.path === '/opt/R' && c.directory)).toBe(true)
   })
+})
+
+describe('restoreSnapshot', () => {
+  it.skipIf(process.platform !== 'win32')('extracts a snapshot zip even with quotes/backticks in paths', async () => {
+    // The dir name contains characters that would break naive quoting.
+    const dir = await mkdtemp(join(tmpdir(), "ezprot-snap-`'q`"))
+    cleanups.push(async () => { await rm(dir, { recursive: true, force: true }) })
+    const lib = join(dir, 'seed', 'library')
+    await mkdir(lib, { recursive: true })
+    await writeFile(join(lib, 'marker.txt'), 'ok', 'utf8')
+    const zip = join(dir, 'snapshot.zip')
+    const res = spawnSync('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-Command',
+      'Compress-Archive -LiteralPath $env:EZPROT_LIB -DestinationPath $env:EZPROT_ZIP -Force',
+    ], {
+      encoding: 'utf8',
+      env: { ...process.env, EZPROT_LIB: lib, EZPROT_ZIP: zip },
+    })
+    expect(res.status).toBe(0)
+    const rt = new Runtime({ dataDir: join(dir, 'ds') })
+    await rt.restoreSnapshot(zip)
+    expect(await readFile(join(rt.libraryDir, 'marker.txt'), 'utf8')).toBe('ok')
+  }, 60000)
 })
 
 describe('downloadFile', () => {

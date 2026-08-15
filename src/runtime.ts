@@ -477,10 +477,16 @@ export class Runtime {
     if (!existsSync(snapshotPath)) throw new Error(`snapshot not found: ${snapshotPath}`)
     mkdirSync(this.runtimeDir, { recursive: true })
     log(`Extracting offline snapshot ${snapshotPath} → ${this.runtimeDir}`)
+    // Paths travel through environment variables, not command-string
+    // interpolation, so quotes/backticks in paths cannot break out of the
+    // argument; -LiteralPath also disables PowerShell wildcard expansion.
     const proc = spawn('powershell.exe', [
-      '-NoProfile', '-Command',
-      `Expand-Archive -Path '${snapshotPath.replace(/'/g, "''")}' -DestinationPath '${this.runtimeDir.replace(/'/g, "''")}' -Force`,
-    ], { windowsHide: true })
+      '-NoProfile', '-NonInteractive', '-Command',
+      'Expand-Archive -LiteralPath $env:EZPROT_SNAPSHOT_PATH -DestinationPath $env:EZPROT_DEST_DIR -Force',
+    ], {
+      windowsHide: true,
+      env: { ...process.env, EZPROT_SNAPSHOT_PATH: snapshotPath, EZPROT_DEST_DIR: this.runtimeDir },
+    })
     let err = ''
     proc.stderr.on('data', (d) => { err += d; log(d) })
     const timedOut = await new Promise<boolean>((resolvePromise) => {
