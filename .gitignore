@@ -4,3 +4,4 @@ tests/projects/
 tests/.runtime*/
 projects/
 *.tsbuildinfo
+data/

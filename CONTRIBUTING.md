@@ -27,14 +27,13 @@ preflighted projects immediately.
 | `src/` | TypeScript plugin sources (built to `lib/`) |
 | `lib/` | Build artifacts (committed; git installs need no build step) |
 | `r/` | R compute engine (vendored pipeline + `run.R` step driver) |
-| `data/backgrounds/mouse/` | Shipped GO/KEGG backgrounds |
 | `manifest/packages.json` | Required R package manifest (R 4.4.0 / Bioc 3.20) |
 | `cordis.patch.yml` | Bundle configuration layer (defaults only) |
 | `tests/unit/` | Vitest unit tests |
 | `tests/e2e/` | End-to-end drivers (need local R 4.4 + a complete R library) |
 | `tests/fixtures/` | Sample mouse dataset used by the e2e drivers |
 | `docker/` | Optional Docker backend image |
-| `scripts/` | Deployment tooling (installer, offline snapshot builder) |
+| `scripts/` | Deployment tooling (installer, offline snapshot builder, linux diag probe) |
 
 ## Conventions
 
