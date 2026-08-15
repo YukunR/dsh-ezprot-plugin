@@ -163,8 +163,22 @@ export class ProteomicsService {
   }
 
   // ── backgrounds ───────────────────────────────────────────────────────────
-  async backgroundEnsure(organism: Organism, opts: { onLog?: LogSink } = {}): Promise<{ go: string; kegg: string }> {
-    return this.backgrounds.ensure(organism, opts)
+  /**
+   * Make both annotation backgrounds available. When no backend is given,
+   * resolve it the usual way (config → persisted state → auto), so the
+   * proteomics_background tool builds inside the docker image on
+   * network-restricted sandboxes where the host process cannot do TLS.
+   */
+  async backgroundEnsure(organism: Organism, opts: { onLog?: LogSink; backend?: 'local' | 'docker'; dockerImage?: string } = {}): Promise<{ go: string; kegg: string }> {
+    let backend = opts.backend
+    let dockerImage = opts.dockerImage
+    if (!backend) {
+      const dockerOk = await this.dockerAvailable()
+      backend = await this.resolveBackend((await this.runtime.detectRscript()) !== null, dockerOk)
+      const st = await this.runtime.getState()
+      dockerImage = dockerImage ?? st.dockerImage ?? this.config.dockerImage ?? 'ezprot:latest'
+    }
+    return this.backgrounds.ensure(organism, { onLog: opts.onLog, backend, dockerImage })
   }
 
   // ── preflight ─────────────────────────────────────────────────────────────
@@ -438,7 +452,7 @@ export class ProteomicsService {
         const bs = this.backgrounds.status(state.organism as Organism)
         if (!bs.go || !bs.kegg) {
           log(`building missing ${state.organism} annotation backgrounds (one-time, cached) ...`)
-          await this.backgrounds.ensure(state.organism as Organism, { onLog })
+          await this.backgrounds.ensure(state.organism as Organism, { onLog: log, backend, dockerImage })
         }
       }
       // The docker backend mounts the background cache at its drive-less

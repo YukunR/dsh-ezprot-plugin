@@ -81,9 +81,9 @@ lookup_go_names <- function(go_ids) {
   )
 
   go_terms <- go_terms %>%
-    rename(GO = GOID, GONAME = TERM) %>%
-    filter(!is.na(GONAME), !is.na(ONTOLOGY)) %>%
-    distinct()
+    dplyr::rename(GO = GOID, GONAME = TERM) %>%
+    dplyr::filter(!is.na(GONAME), !is.na(ONTOLOGY)) %>%
+    dplyr::distinct()
 
   return(go_terms)
 }
@@ -141,7 +141,7 @@ build_from_uniprot <- function(uniprot_file, output_path) {
     dplyr::distinct()
 
   message("  Final protein-GO pairs: ", nrow(result))
-  message("  Unique proteins: ", n_distinct(result$UNIPROT))
+  message("  Unique proteins: ", length(unique(result$UNIPROT)))
 
   write.csv(result, output_path, row.names = FALSE)
   message("GO background saved to: ", output_path)
@@ -203,7 +203,7 @@ build_from_bioconductor <- function(org_package, output_path, evidence_filter = 
     dplyr::distinct()
 
   message("  Final protein-GO pairs: ", nrow(result))
-  message("  Unique proteins: ", n_distinct(result$UNIPROT))
+  message("  Unique proteins: ", length(unique(result$UNIPROT)))
 
   write.csv(result, output_path, row.names = FALSE)
   message("GO background saved to: ", output_path)

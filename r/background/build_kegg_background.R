@@ -182,5 +182,8 @@ message("=== Writing output ===")
 write.table(path_data, out_path, quote = FALSE, sep = "\t", row.names = FALSE)
 message("KEGG background saved to: ", out_path)
 message("Total UNIPROT-PATH pairs: ", nrow(path_data))
-message("Unique proteins: ", n_distinct(path_data$UNIPROT))
-message("Unique pathways: ", n_distinct(path_data$PATH))
+# base R only: this script must run in the minimal docker image, where only
+# the manifest packages are guaranteed (dplyr IS present, but the script's
+# declared dependency is optparse, so keep the stats dependency-free).
+message("Unique proteins: ", length(unique(path_data$UNIPROT)))
+message("Unique pathways: ", length(unique(path_data$PATH)))

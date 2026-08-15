@@ -12,6 +12,42 @@ export function dockerImageReady(image: string): boolean {
   return spawnString('docker', ['image', 'inspect', image], 30000) !== null
 }
 
+export interface DockerRunResult {
+  code: number | null
+  timedOut: boolean
+  tail: string
+}
+
+/**
+ * Run a command inside the image: `docker run --rm <dockerArgs> <image> <cmd...>`.
+ * dockerArgs must be pre-validated (mount flags etc.); cmd is argv, never shell.
+ */
+export async function dockerRun(image: string, dockerArgs: string[], cmd: string[], opts: { onLog?: LogSink; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<DockerRunResult> {
+  const log: LogSink = opts.onLog ?? (() => {})
+  const timeoutMs = opts.timeoutMs ?? 30 * 60 * 1000
+  const proc = spawn('docker', ['run', '--rm', ...dockerArgs, image, ...cmd], { windowsHide: true })
+  wireKillOnAbort(proc, opts.signal)
+  let tail = ''
+  let tailFull = ''
+  const push = (text: string) => {
+    tailFull += text
+    tail = tailFull.length > 6000 ? tailFull.slice(-6000) : tailFull
+    log(text)
+  }
+  proc.stdout.on('data', (d: Buffer) => push(d.toString()))
+  proc.stderr.on('data', (d: Buffer) => push(d.toString()))
+  let timedOut = false
+  const code = await new Promise<number | null>((resolvePromise) => {
+    const timer = setTimeout(() => {
+      timedOut = true
+      try { proc.kill() } catch { /* already dead */ }
+    }, timeoutMs)
+    proc.on('error', () => { clearTimeout(timer); resolvePromise(null) })
+    proc.on('close', (c) => { clearTimeout(timer); resolvePromise(c) })
+  })
+  return { code, timedOut, tail }
+}
+
 export async function dockerPull(image: string, opts: { onLog?: LogSink; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<void> {
   const log: LogSink = opts.onLog ?? (() => {})
   const timeoutMs = opts.timeoutMs ?? 30 * 60 * 1000

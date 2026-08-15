@@ -255,8 +255,13 @@ export function buildToolDefinitions(service: ProteomicsService, registerImage?:
       execute: async (args: InferArgs<ParameterSchemaSpec>) => {
         const log = logCollector()
         if ((args.action ?? 'status') === 'build') {
-          const result = await guard(service.backgroundEnsure(args.organism as 'human' | 'mouse' | 'rat', { onLog: log.onLog }), log)
-          return `backgrounds ready for ${args.organism}\nGO: ${result.go}\nKEGG: ${result.kegg}`
+          try {
+            const result = await guard(service.backgroundEnsure(args.organism as 'human' | 'mouse' | 'rat', { onLog: log.onLog }), log)
+            return `backgrounds ready for ${args.organism}\nGO: ${result.go}\nKEGG: ${result.kegg}`
+          } catch (error) {
+            const base = error instanceof Error ? error.message : String(error)
+            throw new Error(`${base}\n网络受限提示：若宿主进程处于受限沙箱（TLS/证书错误或持续超时），请用 ask_user_question 向用户申请提权后重试，或确认使用 Docker 后端（容器内网络不受沙箱限制；已选 Docker 后端时插件会在容器内构建背景）。`)
+          }
         }
         const status = await service.backgrounds.status(args.organism as 'human' | 'mouse' | 'rat')
         return `${args.organism}: GO ${status.go ? 'ready' : 'missing (built on first use)'}, KEGG ${status.kegg ? 'ready' : 'missing (built on first use)'} — cache: ${status.cacheDir}`
