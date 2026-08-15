@@ -75,6 +75,28 @@ describe('restoreSnapshot', () => {
   }, 60000)
 })
 
+describe('runtime state', () => {
+  it('serializes concurrent state updates without losing fields', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ezprot-state-'))
+    cleanups.push(async () => { await rm(dir, { recursive: true, force: true }) })
+    const rt = new Runtime({ dataDir: dir })
+    await Promise.all([
+      rt.setState({ backend: 'docker' }),
+      rt.setState({ dockerImage: 'yukunru/ezprot:1.2' }),
+      rt.setState({ backend: 'local' }),
+    ])
+    const state = await rt.getState()
+    expect(state.backend).toBe('local')
+    expect(state.dockerImage).toBe('yukunru/ezprot:1.2')
+  })
+  it('returns an empty state before any write', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ezprot-state-'))
+    cleanups.push(async () => { await rm(dir, { recursive: true, force: true }) })
+    const rt = new Runtime({ dataDir: dir })
+    expect(await rt.getState()).toEqual({})
+  })
+})
+
 describe('downloadFile', () => {
   it('downloads and writes the response body', async () => {
     const server = createServer((_req, res) => {
