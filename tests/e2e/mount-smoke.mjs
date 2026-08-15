@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 
 const req = createRequire('C:/Users/Yuxiang Tang/.dsh/profiles/web/package.json')
-const pluginEntry = req.resolve('ezprot-dsh-plugin')
+const pluginEntry = req.resolve('dsh-ezprot-plugin')
 console.log('resolved plugin entry:', pluginEntry)
 
 const mod = await import(pathToFileURL(pluginEntry).href)
