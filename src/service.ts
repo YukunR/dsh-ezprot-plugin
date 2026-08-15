@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Runtime, DEFAULT_DOCKER_IMAGE, type LogSink, type PackageManifest, type RuntimeStatus } from './runtime.js'
 import { Backgrounds, ORGANISMS, packageDir, type BackgroundStatus, type Organism } from './backgrounds.js'
-import { Project, preflight, writeGeneratedSampleInfo, type Comparison, type PipelineParams } from './pipeline.js'
+import { Project, preflight, toContainerPath, writeGeneratedSampleInfo, type Comparison, type PipelineParams } from './pipeline.js'
 import { inspectRawFile, tidyRawFile, type InspectResult, type TidyOptions } from './import.js'
 
 export const STEPS = ['normalization', 'pca', 'batch_remove', 'dea', 'enrich', 'gsea', 'all'] as const
@@ -441,7 +441,19 @@ export class ProteomicsService {
           await this.backgrounds.ensure(state.organism as Organism, { onLog })
         }
       }
-      project.regenerateMainR(state)
+      // The docker backend mounts the background cache at its drive-less
+      // host path inside the container, so main.R must carry container
+      // paths there; the persisted project state keeps the host paths.
+      const regenState = backend === 'docker'
+        ? {
+            ...state,
+            backgrounds: {
+              go: state.backgrounds?.go ? toContainerPath(state.backgrounds.go) : undefined,
+              kegg: state.backgrounds?.kegg ? toContainerPath(state.backgrounds.kegg) : undefined,
+            },
+          }
+        : state
+      project.regenerateMainR(regenState)
       const log: LogSink = onLog ?? (() => {})
       const rStep = step === 'batch_remove' ? 'batch-removal' : step
       const res = await project.runStep(this.runtime, rStep, {

@@ -11,15 +11,27 @@ describe('STEPS', () => {
 })
 
 describe('resolveBackend', () => {
+  function tempSvc() {
+    const dir = mkdtempSync(join(tmpdir(), 'ezprot-be-'))
+    return { svc: new ProteomicsService({ dataDir: dir }), dir }
+  }
   it('prefers local R in auto mode', async () => {
-    const svc = new ProteomicsService({ dataDir: '' })
-    expect(await svc.resolveBackend(true, true)).toBe('local')
-    expect(await svc.resolveBackend(true, false)).toBe('local')
+    const { svc, dir } = tempSvc()
+    try {
+      expect(await svc.resolveBackend(true, true)).toBe('local')
+      expect(await svc.resolveBackend(true, false)).toBe('local')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
   it('falls back to docker when no local R exists', async () => {
-    const svc = new ProteomicsService({ dataDir: '' })
-    expect(await svc.resolveBackend(false, true)).toBe('docker')
-    expect(await svc.resolveBackend(false, false)).toBe('local')
+    const { svc, dir } = tempSvc()
+    try {
+      expect(await svc.resolveBackend(false, true)).toBe('docker')
+      expect(await svc.resolveBackend(false, false)).toBe('local')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
   it('honors explicit backends', async () => {
     expect(await new ProteomicsService({ backend: 'local', dataDir: '' }).resolveBackend(false, true)).toBe('local')

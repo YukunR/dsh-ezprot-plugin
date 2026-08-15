@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseCsv, preflight, rComparisons, rEscape, rLogical, rNaThreshold, rNumber, rString, rVector } from '../../src/pipeline.js'
+import { parseCsv, preflight, rComparisons, rEscape, rLogical, rNaThreshold, rNumber, rString, rVector, toContainerPath, toHostPath, dockerMountArgs } from '../../src/pipeline.js'
 
 async function withMatrix(content: string, fn: (file: string) => Promise<void>): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), 'ezprot-pf-'))
@@ -96,6 +96,25 @@ describe('parseCsv', () => {
   })
   it('returns [] for empty input', () => {
     expect(parseCsv('')).toEqual([])
+  })
+})
+
+describe('docker path helpers', () => {
+  it('converts host paths to forward slashes', () => {
+    expect(toHostPath('C:\\Users\\A B\\.dsh\\x')).toBe('C:/Users/A B/.dsh/x')
+  })
+  it('strips the drive letter for container paths', () => {
+    expect(toContainerPath('C:\\Users\\A B\\.dsh\\x')).toBe('/Users/A B/.dsh/x')
+    expect(toContainerPath('C:/Users/A B/.dsh/x')).toBe('/Users/A B/.dsh/x')
+  })
+  it('builds --mount bind args with comma delimiters (no colon parsing)', () => {
+    const args = dockerMountArgs('D:\\proj\\demo', 'C:\\Users\\A B\\.dsh\\proteomics\\backgrounds')
+    expect(args).toEqual([
+      '--mount', 'type=bind,source=D:/proj/demo,target=/workspace',
+      '--mount', 'type=bind,source=C:/Users/A B/.dsh/proteomics/backgrounds,target=/Users/A B/.dsh/proteomics/backgrounds',
+    ])
+    // the two Windows drive-letter colons must not leak into the mounts
+    for (const a of args) expect(a.startsWith('-v')).toBe(false)
   })
 })
 

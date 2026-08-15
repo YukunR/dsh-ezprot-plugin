@@ -101,6 +101,20 @@ export interface GseaComparisonSummary {
     topPositive: GseaSet[];
     topNegative: GseaSet[];
 }
+/** Windows host path → forward-slash form Docker Desktop accepts. */
+export declare function toHostPath(p: string): string;
+/** Host path → in-container path: strip the drive letter (C:/x → /x). */
+export declare function toContainerPath(p: string): string;
+/**
+ * Bind-mount arguments for the docker backend. Uses `--mount` (comma
+ * delimiters, key=value) instead of `-v` because `-v` splits on ':' and
+ * Windows drive letters corrupt the source:target:mode parsing ("invalid
+ * mode" from the daemon). The project dir maps to /workspace; the
+ * annotation background cache maps to its own host path minus the drive
+ * letter, so the container-internal absolute paths baked into main.R
+ * (toContainerPath) resolve to the same files.
+ */
+export declare function dockerMountArgs(projectDir: string, backgroundsDir: string): string[];
 export interface RunStepResult {
     code: number | null;
     timedOut: boolean;
