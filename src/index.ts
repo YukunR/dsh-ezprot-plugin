@@ -36,7 +36,7 @@ export const Config = Schema.object({
   enableInstall: Schema.boolean().default(true),
   defaultTimeoutMs: Schema.number().default(1800000),
   backend: Schema.string().default('auto'),
-  dockerImage: Schema.string().default('yukunru/ezprot:latest'),
+  dockerImage: Schema.string().default('yukunru/ezprot:0.1.0-beta'),
 })
 
 const PROMPT_SECTION = [
