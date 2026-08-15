@@ -10,6 +10,8 @@ export declare const DEFAULT_MIRRORS: {
     fallbackRBase: string;
 };
 export declare const LINUX_BINARY_CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/2024-11-15";
+/** Fallback image when no dockerImage is configured or persisted. */
+export declare const DEFAULT_DOCKER_IMAGE = "ezprot:latest";
 export interface RuntimeConfig {
     dataDir?: string;
     libraryDir?: string;
