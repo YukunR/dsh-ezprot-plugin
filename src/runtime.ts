@@ -67,13 +67,14 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Download with redirects and retries. Returns the destination path. */
-export async function downloadFile(url: string, dest: string, opts: { retries?: number } = {}): Promise<string> {
+/** Download with redirects, retries, and a per-attempt timeout. Returns the destination path. */
+export async function downloadFile(url: string, dest: string, opts: { retries?: number; timeoutMs?: number } = {}): Promise<string> {
   const retries = opts.retries ?? 3
+  const timeoutMs = opts.timeoutMs ?? 10 * 60 * 1000
   let lastError: unknown
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url, { redirect: 'follow' })
+      const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(timeoutMs) })
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
       await mkdir(dirname(dest), { recursive: true })
       await pipeline(Readable.fromWeb(res.body as never), createWriteStream(dest))
@@ -209,8 +210,13 @@ export class Runtime {
       const proc = spawn(installer, ['/VERYSILENT', '/CURRENTUSER', `/DIR=${installDir}`, '/NORESTART', '/SUPPRESSMSGBOXES'], {
         windowsHide: true,
       })
-      proc.on('error', reject)
+      const timer = setTimeout(() => {
+        try { proc.kill() } catch { /* already dead */ }
+        reject(new Error('R installer timed out after 30 minutes'))
+      }, 30 * 60 * 1000)
+      proc.on('error', (error) => { clearTimeout(timer); reject(error) })
       proc.on('close', (code) => {
+        clearTimeout(timer)
         if (code === 0 && existsSync(join(installDir, 'bin', 'Rscript.exe'))) resolvePromise()
         else reject(new Error(`R installer exited with code ${code}`))
       })
