@@ -67,6 +67,41 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** PATH lookup command + binary name for the current platform. */
+export function pathLookupCommand(): { cmd: string; target: string } {
+  return process.platform === 'win32'
+    ? { cmd: 'where', target: 'Rscript.exe' }
+    : { cmd: 'which', target: 'Rscript' }
+}
+
+export interface RPathCandidate {
+  path: string
+  /** When true, the path is a root whose child dirs hold bin/Rscript(.exe). */
+  directory: boolean
+  preferred?: boolean
+}
+
+/**
+ * Well-known R install locations probed by detectRscript, besides the
+ * PATH lookup. Directory entries are scanned for version sub-directories
+ * (R-4.4.0, R_4.4.0, ...).
+ */
+export function candidateScriptPaths(runtimeDir: string): RPathCandidate[] {
+  const list: RPathCandidate[] = []
+  if (process.platform === 'win32') {
+    list.push({ path: join(runtimeDir, `R-${R_VERSION}`, 'bin', 'Rscript.exe'), directory: false, preferred: true })
+    for (const root of ['D:\\R', 'C:\\Program Files\\R']) list.push({ path: root, directory: true })
+  } else {
+    list.push(
+      { path: '/usr/local/bin/Rscript', directory: false },
+      { path: '/usr/bin/Rscript', directory: false },
+      { path: '/opt/homebrew/bin/Rscript', directory: false },
+      { path: '/opt/R', directory: true },
+    )
+  }
+  return list
+}
+
 /** Download with redirects, retries, and a per-attempt timeout. Returns the destination path. */
 export async function downloadFile(url: string, dest: string, opts: { retries?: number; timeoutMs?: number } = {}): Promise<string> {
   const retries = opts.retries ?? 3
@@ -129,8 +164,9 @@ export class Runtime {
   }
 
   whereRscript(): string | null {
+    const { cmd, target } = pathLookupCommand()
     try {
-      const res = spawnSync('where', ['Rscript.exe'], { encoding: 'utf8', timeout: 15000, windowsHide: true })
+      const res = spawnSync(cmd, [target], { encoding: 'utf8', timeout: 15000, windowsHide: true })
       const first = (res.stdout || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)[0]
       return first || null
     } catch {
@@ -141,16 +177,23 @@ export class Runtime {
   /** Locate a usable Rscript (config override → plugin-managed → common dirs → PATH). */
   async detectRscript(): Promise<string | null> {
     if (this.config.rscript) return this.config.rscript
+    const exe = process.platform === 'win32' ? 'Rscript.exe' : 'Rscript'
     const candidates: Array<{ path: string; preferred: boolean }> = []
-    candidates.push({ path: join(this.runtimeDir, `R-${R_VERSION}`, 'bin', 'Rscript.exe'), preferred: true })
-    for (const root of ['D:\\R', 'C:\\Program Files\\R']) {
-      try {
-        const dirs = await readdir(root)
-        for (const d of dirs) {
-          candidates.push({ path: join(root, d, 'bin', 'Rscript.exe'), preferred: d === `R-${R_VERSION}` || d === `R_${R_VERSION}` })
+    for (const c of candidateScriptPaths(this.runtimeDir)) {
+      if (c.directory) {
+        try {
+          const dirs = await readdir(c.path)
+          for (const d of dirs) {
+            candidates.push({
+              path: join(c.path, d, 'bin', exe),
+              preferred: Boolean(c.preferred) || d === `R-${R_VERSION}` || d === `R_${R_VERSION}`,
+            })
+          }
+        } catch {
+          // root does not exist
         }
-      } catch {
-        // root does not exist
+      } else {
+        candidates.push({ path: c.path, preferred: Boolean(c.preferred) })
       }
     }
     let best: string | null = null
