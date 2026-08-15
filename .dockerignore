@@ -1,0 +1,11 @@
+node_modules
+.pnpm-store
+tests
+projects
+.git
+lib
+src
+scripts
+docs
+*.tsbuildinfo
+pnpm-lock.yaml
