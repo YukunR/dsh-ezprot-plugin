@@ -3,7 +3,7 @@ import { createServer } from 'node:http'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { downloadFile } from '../../src/runtime.js'
+import { candidateScriptPaths, downloadFile, pathLookupCommand } from '../../src/runtime.js'
 
 const cleanups: Array<() => Promise<void>> = []
 afterEach(async () => {
@@ -24,6 +24,32 @@ async function tempDest(): Promise<string> {
   cleanups.push(async () => { await rm(dir, { recursive: true, force: true }) })
   return join(dir, 'out.bin')
 }
+
+describe('pathLookupCommand', () => {
+  it('uses where on Windows and which elsewhere', () => {
+    if (process.platform === 'win32') {
+      expect(pathLookupCommand()).toEqual({ cmd: 'where', target: 'Rscript.exe' })
+    } else {
+      expect(pathLookupCommand()).toEqual({ cmd: 'which', target: 'Rscript' })
+    }
+  })
+})
+
+describe('candidateScriptPaths', () => {
+  it('probes Windows roots on win32', () => {
+    if (process.platform !== 'win32') return
+    const list = candidateScriptPaths('/x/runtime')
+    expect(list.some((c) => c.path === 'D:\\R' && c.directory)).toBe(true)
+    expect(list.some((c) => c.path.endsWith('R-4.4.0\\bin\\Rscript.exe') && c.preferred)).toBe(true)
+  })
+  it('probes POSIX locations elsewhere', () => {
+    if (process.platform === 'win32') return
+    const list = candidateScriptPaths('/x/runtime')
+    expect(list.some((c) => c.path === '/usr/bin/Rscript')).toBe(true)
+    expect(list.some((c) => c.path === '/opt/homebrew/bin/Rscript')).toBe(true)
+    expect(list.some((c) => c.path === '/opt/R' && c.directory)).toBe(true)
+  })
+})
 
 describe('downloadFile', () => {
   it('downloads and writes the response body', async () => {
