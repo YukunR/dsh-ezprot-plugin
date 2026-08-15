@@ -8,7 +8,7 @@
 ## 1. 本地构建（在装有 Docker 的机器上）
 
 ```powershell
-cd D:\ResearchProject\ezprot-dsh-plugin
+cd <本仓库路径>
 docker build -t ezprot:latest -f docker/Dockerfile .
 ```
 
@@ -51,10 +51,12 @@ docker run --rm ezprot:latest Rscript /opt/ezprot/check_runtime.R /opt/ezprot/ma
 
 ### 方式 A：Docker Hub（本项目默认，镜像地址 `yukunru/ezprot`）
 
+预发布版本推 `0.1.0-beta`，同时维护 `latest` 供插件默认拉取：
+
 ```powershell
-docker login                                        # 用你的 Docker Hub 账号
-docker tag ezprot:latest yukunru/ezprot:0.1.0
-docker push yukunru/ezprot:0.1.0
+docker login                                        # 用你的 Docker Hub 账号（Access Token）
+docker tag ezprot:latest yukunru/ezprot:0.1.0-beta
+docker push yukunru/ezprot:0.1.0-beta
 docker tag ezprot:latest yukunru/ezprot:latest
 docker push yukunru/ezprot:latest
 ```
@@ -68,8 +70,8 @@ docker push yukunru/ezprot:latest
 ```powershell
 $env:CR_PAT = '<你的token>'
 $env:CR_PAT | docker login ghcr.io -u <你的GitHub用户名> --password-stdin
-docker tag ezprot:latest ghcr.io/<你的GitHub用户名>/ezprot:0.1.0
-docker push ghcr.io/<你的GitHub用户名>/ezprot:0.1.0
+docker tag ezprot:latest ghcr.io/<你的GitHub用户名>/ezprot:latest
+docker push ghcr.io/<你的GitHub用户名>/ezprot:latest
 ```
 
 ### 多平台（可选，覆盖 M 系列 Mac / 服务器）
@@ -77,7 +79,7 @@ docker push ghcr.io/<你的GitHub用户名>/ezprot:0.1.0
 ```powershell
 docker buildx create --use
 docker buildx build --platform linux/amd64,linux/arm64 `
-  -t <registry>/ezprot:0.1.0 --push -f docker/Dockerfile .
+  -t <registry>/ezprot:latest --push -f docker/Dockerfile .
 ```
 
 ## 4. 插件侧使用

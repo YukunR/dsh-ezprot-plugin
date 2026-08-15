@@ -7,7 +7,7 @@
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\create-offline-snapshot.ps1 `
-#     -LibraryDir "D:\ResearchProject\EasyProteomicsAnalysis\renv\library\windows\R-4.4\x86_64-w64-mingw32" `
+#     -LibraryDir "D:\path\to\your\R-library" `
 #     -Output "D:\ezprot-offline-snapshot.zip"
 param(
   [Parameter(Mandatory = $true)]

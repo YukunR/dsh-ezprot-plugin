@@ -10,13 +10,9 @@ No R, no Docker, no terminal knowledge required: the plugin detects or silently 
 
 Requires the [`dsh`](https://github.com/deepseek-ai/deepseek-harness) CLI. One command:
 
-```powershell
-# Windows PowerShell
-dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
-```
+- Windows / macOS / Linux
 
 ```bash
-# Linux / macOS
 dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
 ```
 

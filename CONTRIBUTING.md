@@ -16,7 +16,7 @@ pnpm test      # vitest unit tests (no R required)
 Development install (live link into a profile):
 
 ```powershell
-dsh plugin --profile web add "link:D:/ResearchProject/dsh-ezprot-plugin"
+dsh plugin --profile web add "link:<absolute-path-to-this-repo>"
 ```
 
 - The `link:` protocol is a symlink: `src/*.ts` changes only need `pnpm build`
@@ -68,7 +68,7 @@ belong in the profile's own `cordis.patch.yml` (id-targeted) or
 | `enableInstall` | `true` | Allow automatic R/package installation |
 | `defaultTimeoutMs` | `1800000` | Per-step timeout |
 | `backend` | `auto` | `auto` (local R preferred; docker when no local R but Docker exists) / `local` / `docker` |
-| `dockerImage` | `yukunru/ezprot:0.1.0-beta` | Image used by the docker backend |
+| `dockerImage` | `yukunru/ezprot:latest` | Image used by the docker backend |
 
 ## Conventions
 
