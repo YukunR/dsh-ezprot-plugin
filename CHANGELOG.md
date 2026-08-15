@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-15
+
 ### Added
 - Bundle-format plugin (`dsh.bundle`) installed with one `dsh plugin add` command.
 - Eight agent tools: `proteomics_environment`, `proteomics_background`, `proteomics_import`, `proteomics_preflight`, `proteomics_compare`, `proteomics_batch`, `proteomics_step`, `proteomics_report`.
