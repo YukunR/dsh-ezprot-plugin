@@ -105,6 +105,7 @@ export declare class Runtime {
         backend?: 'local' | 'docker';
         dockerImage?: string;
     }>;
+    private stateQueue;
     setState(patch: {
         backend?: 'local' | 'docker';
         dockerImage?: string;

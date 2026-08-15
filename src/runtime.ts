@@ -2,7 +2,7 @@
 // installation from mirrors, offline snapshot restore, health status.
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, createWriteStream } from 'node:fs'
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -403,10 +403,21 @@ export class Runtime {
     }
   }
 
+  // Serializes state updates: each setState re-reads the file after the
+  // previous write completes, so concurrent callers cannot lose fields.
+  private stateQueue: Promise<unknown> = Promise.resolve()
+
   async setState(patch: { backend?: 'local' | 'docker'; dockerImage?: string }): Promise<void> {
-    await mkdir(this.dataDir, { recursive: true })
-    const current = await this.getState()
-    await writeFile(this.statePath(), JSON.stringify({ ...current, ...patch }, null, 2), 'utf8')
+    const run = this.stateQueue.then(async () => {
+      await mkdir(this.dataDir, { recursive: true })
+      const current = await this.getState()
+      // write-then-rename: readers (getState) never observe a torn file
+      const tmp = `${this.statePath()}.tmp`
+      await writeFile(tmp, JSON.stringify({ ...current, ...patch }, null, 2), 'utf8')
+      await rename(tmp, this.statePath())
+    })
+    this.stateQueue = run.catch(() => {})
+    await run
   }
 
   dockerAvailable(): boolean {
