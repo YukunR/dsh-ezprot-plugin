@@ -8,9 +8,13 @@ No R, no Docker, no terminal knowledge required: the plugin detects or silently 
 
 ## Install
 
-Requires the [`dsh`](https://github.com/deepseek-ai/deepseek-harness) CLI. One command:
+Requires the [`dsh`](https://github.com/deepseek-ai/deepseek-harness) CLI (Windows / macOS / Linux), one command:
 
-- Windows / macOS / Linux
+```bash
+npx @deepseek-ai/dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
+```
+
+If `dsh` is already installed globally, drop the `npx @deepseek-ai/` prefix: 
 
 ```bash
 dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin

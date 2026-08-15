@@ -8,9 +8,13 @@
 
 ## 安装
 
-需要 [`dsh`](https://github.com/deepseek-ai/deepseek-harness) 命令行工具。使用如下命令安装：
+需要 [`dsh`](https://github.com/deepseek-ai/deepseek-harness) 命令行工具（Windows / macOS / Linux 通用），一条命令：
 
-- Windows / macOS / Linux
+```bash
+npx @deepseek-ai/dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
+```
+
+已全局安装 `dsh` 时，去掉 `npx @deepseek-ai/` 前缀即可：
 
 ```bash
 dsh plugin --profile web add github:YukunR/dsh-ezprot-plugin
