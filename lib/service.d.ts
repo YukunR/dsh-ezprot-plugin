@@ -89,6 +89,12 @@ export declare class ProteomicsService {
      * when no local R exists but Docker does).
      */
     resolveBackend(hasLocalR: boolean, hasDocker: boolean): Promise<'local' | 'docker'>;
+    /**
+     * Verify the docker backend can actually run a step: the CLI must be
+     * present AND the image must already be pulled. Without this, `docker run`
+     * would implicitly pull (unbounded, no progress feed) and fail confusingly.
+     */
+    assertDockerReady(image: string, dockerOk: boolean): Promise<void>;
     runStep(opts: {
         projectDir: string;
         step: Step;
