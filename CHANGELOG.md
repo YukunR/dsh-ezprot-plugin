@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-16
+
+### Changed
+- Install path moved to the npm registry (`dsh plugin add dsh-ezprot-plugin`): end users need only Node.js and pnpm — no git, no build on install (the `prepare` script is gone; the committed `lib/` is used as-is).
+- Package installer hardened against mirror rate-limits and missing Rtools: install retries verify the package really appears in the library (HTTP 429 warnings can no longer masquerade as success); annotation data packages (GO.db, GenomeInfoDbData, ...) install from single source tarballs instead of the parallel-make path; a dependency-closure pass plus a multi-round whole-manifest audit installs missing Imports/Depends/LinkingTo until the closure is complete; png gets multi-mirror binary retries (Westlake-first, TUNA-free) with a bounded source fallback on Windows.
+- Manifest now lists `png`, `ape`, and `UCSC.utils` explicitly so the verified retries cover them from the first pass.
+
+### Fixed
+- False "interrupted step" warning on every step run: the success-path checkpoint reload no longer treats the in-flight step as a stale interruption.
+- Enrichment and GSEA now run through the checkpoint framework (completion markers, output hashes, comparison-config tracking, dependency validation, `--rerun` support) instead of bypassing it.
+
 ## [0.1.0] - 2026-08-15
 
 ### Added
