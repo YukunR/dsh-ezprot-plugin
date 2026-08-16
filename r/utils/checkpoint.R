@@ -26,12 +26,17 @@ create_workspace <- function(project_name, base_dir = "./res/") {
 }
 
 # Load checkpoint status
-load_checkpoint <- function(workspace) {
+# reset_interrupted = FALSE: do not clear an in-flight current_step. Callers
+# that reload DURING step execution (execute_step's success path) pass FALSE
+# because current_step is the step being finished, not a previous-session
+# interruption; everything else (startup, error/interrupt handlers) keeps the
+# default so a stale current_step from a crashed session is cleaned up.
+load_checkpoint <- function(workspace, reset_interrupted = TRUE) {
   if (file.exists(workspace$checkpoint_file)) {
     checkpoint <- fromJSON(workspace$checkpoint_file, simplifyDataFrame = FALSE)
 
     # Handle potential interrupted state from previous session
-    if (!is.null(checkpoint$current_step)) {
+    if (reset_interrupted && !is.null(checkpoint$current_step)) {
       log_message(
         workspace,
         paste(
@@ -451,8 +456,11 @@ execute_step <- function(workspace, step_name, step_function,
     {
       result <- step_function(workspace, ...)
 
-      # Reload checkpoint (it might have been modified during step execution)
-      checkpoint <- load_checkpoint(workspace)
+      # Reload checkpoint (it might have been modified during step execution).
+      # current_step is still set to THIS step here, so the interrupted-state
+      # cleanup must not run: that state is the one being completed, not a
+      # leftover from a crashed session.
+      checkpoint <- load_checkpoint(workspace, reset_interrupted = FALSE)
 
       # Verify output files and record hashes
       if (!is.null(output_files)) {
