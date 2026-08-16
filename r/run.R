@@ -53,12 +53,48 @@ run_one <- function(step_name, step_function, output_files, dependencies = NULL,
 
 cat("=== ezprot run.R:", step, "===\n")
 
+# Per-comparison enrichment/GSEA steps run through execute_step so they get
+# the same checkpointing as every other stage (completion markers, output
+# file hashes, config tracking, dependency validation, force-rerun support).
+run_enrichment <- function() {
+  for (cname in names(config$comparisons)) {
+    local({
+      cn <- cname
+      run_one(paste0("enrichment_", cn),
+        function(ws, ...) step_enrichment_single(ws, cn, config),
+        c(
+          paste0("dea_results/", cn, "/enrichment_results/analysis_all_go_results.csv"),
+          paste0("dea_results/", cn, "/enrichment_results/analysis_all_kegg_results.csv")
+        ),
+        dependencies = c("normalization", paste0("differential_analysis_", cn)),
+        config_to_track = config$comparisons[[cn]],
+        cfg = config,
+        cleanup_patterns = paste0("dea_results/", cn, "/enrichment_results/.*"),
+        force = !is.null(force_rerun_list) && any(c("enrich", paste0("enrichment_", cn)) %in% force_rerun_list))
+    })
+  }
+}
+
+run_gsea <- function() {
+  for (cname in names(config$comparisons)) {
+    local({
+      cn <- cname
+      run_one(paste0("gsea_", cn),
+        function(ws, ...) step_gsea_single(ws, cn, config),
+        paste0("dea_results/", cn, "/gsea_results/gsea_results.csv"),
+        dependencies = c("normalization", paste0("differential_analysis_", cn)),
+        config_to_track = config$comparisons[[cn]],
+        cfg = config,
+        cleanup_patterns = paste0("dea_results/", cn, "/gsea_results/.*"),
+        force = !is.null(force_rerun_list) && any(c("gsea", paste0("gsea_", cn)) %in% force_rerun_list))
+    })
+  }
+}
+
 if (step == "all") {
   run_proteomics_analysis(force_rerun_list = force_rerun_list)
-  for (cname in names(config$comparisons)) {
-    step_enrichment_single(workspace, cname, config)
-    step_gsea_single(workspace, cname, config)
-  }
+  run_enrichment()
+  run_gsea()
 
 } else if (step == "normalization") {
   run_one("normalization", step_normalization, c("normalization_results.rds"),
@@ -107,10 +143,10 @@ if (step == "all") {
   }
 
 } else if (step == "enrich") {
-  for (cname in names(config$comparisons)) step_enrichment_single(workspace, cname, config)
+  run_enrichment()
 
 } else if (step == "gsea") {
-  for (cname in names(config$comparisons)) step_gsea_single(workspace, cname, config)
+  run_gsea()
 
 } else {
   stop("Unknown step: ", step)
