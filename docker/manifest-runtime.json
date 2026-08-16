@@ -1,14 +1,15 @@
 {
+  "_comment": "Runtime install manifest for the image build. The cran/bioc lists mirror manifest/packages.json — keep them in sync when the manifest changes.",
   "cran": [
     "tidyverse", "ggplot2", "pheatmap", "cowplot", "ggforce", "gghalves", "ggalt",
     "ggdist", "ggrepel", "patchwork", "viridis", "corrplot", "ggdendro",
     "RColorBrewer", "scales", "stringr", "stringi", "magrittr", "broom", "car",
     "progress", "jsonlite", "digest", "reshape2", "multiUS", "data.table",
-    "optparse", "BiocManager", "readxl", "remotes"
+    "optparse", "BiocManager", "readxl", "remotes", "png", "ape"
   ],
   "bioc": [
     "PCAtools", "sva", "clusterProfiler", "enrichplot", "DOSE", "fgsea", "qvalue",
-    "GO.db", "AnnotationDbi"
+    "GO.db", "AnnotationDbi", "UCSC.utils"
   ],
   "biocVersion": "3.20",
   "repos": {
