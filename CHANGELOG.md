@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Install command in `README.md` / `docs/README.zh.md` now pins the version (`add dsh-ezprot-plugin@0.1.1`): pnpm 11's supply-chain default `minimumReleaseAge` (24h) makes bare `add` and `@latest` resolve to the previous release during the first day after a publish, so the docs pin the version and the release checklist keeps them in sync.
+
 ## [0.1.1] - 2026-08-16
 
 ### Changed

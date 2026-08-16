@@ -80,6 +80,24 @@ belong in the profile's own `cordis.patch.yml` (id-targeted) or
 - Prefer structured summaries (CSV-derived) over parsing R log text.
 - Bump `CHANGELOG.md` with every user-visible change.
 
+## Releasing
+
+- `npm publish` from the release branch; tag the release commit (`vX.Y.Z`),
+  push the tag, then merge the branch into `main` with a merge commit.
+- **Pin the version in the install command**: `README.md` and
+  `docs/README.zh.md` carry `add dsh-ezprot-plugin@X.Y.Z`. Bump the pinned
+  version in the same commit as the `package.json` version bump.
+
+Why the pin matters: pnpm ≥ 11 ships a supply-chain default
+`minimumReleaseAge` of 24 hours (config key `minimum-release-age`, 1440
+minutes; non-strict). Resolvers pick the newest version published at least
+that long ago, so a bare `add dsh-ezprot-plugin` — or
+`add dsh-ezprot-plugin@latest`, whose dist-tag is age-filtered the same way —
+silently installs the previous release during the first 24 hours after a
+publish. An explicit `add dsh-ezprot-plugin@X.Y.Z` always installs exactly
+that version; pnpm records it in the profile's `pnpm-workspace.yaml`
+(`minimumReleaseAgeExclude`) and proceeds. Verified against pnpm 11.21.0.
+
 ## Pull requests
 
 1. `pnpm build && pnpm test` must pass.

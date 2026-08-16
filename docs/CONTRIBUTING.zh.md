@@ -78,6 +78,22 @@ node tests\e2e\env-fresh.mjs        # 全新机器安装模拟（干净 R + 空�
 - 优先用结构化摘要（CSV 推导）而不是解析 R 日志文本。
 - 每个用户可见的改动都要更新 `CHANGELOG.md`。
 
+## 发布
+
+- 从 release 分支执行 `npm publish`；给发布提交打 tag（`vX.Y.Z`）并推送
+  tag，然后用 merge commit 把分支合入 `main`。
+- **安装命令必须带版本号**：`README.md` 和 `docs/README.zh.md` 中的命令为
+  `add dsh-ezprot-plugin@X.Y.Z`。请在 `package.json` 升版本号的同一个提交里
+  同步更新这两个文件的版本。
+
+为什么必须带版本号：pnpm ≥ 11 内置供应链默认策略 `minimumReleaseAge`
+（配置键 `minimum-release-age`，1440 分钟 = 24 小时；非严格模式）。解析器只
+选发布满 24 小时的版本，因此发布后的第一天内，裸 `add dsh-ezprot-plugin` ——
+或 `add dsh-ezprot-plugin@latest`（dist-tag 同样被发布龄过滤）—— 会静默装上
+上一个版本。显式 `add dsh-ezprot-plugin@X.Y.Z` 则总是精确安装该版本：pnpm
+会把该版本记入 profile 的 `pnpm-workspace.yaml`（`minimumReleaseAgeExclude`）
+后继续。以上行为已在 pnpm 11.21.0 上实测确认。
+
 ## 提交 Pull Request
 
 1. `pnpm build && pnpm test` 必须通过。

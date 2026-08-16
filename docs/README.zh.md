@@ -4,7 +4,7 @@
 
 一个**即插即用的 DeepSeek Harness 蛋白质组学分析插件**。它把完整的蛋白表达分析流程——归一化 → PCA → 批次校正 → 差异分析 → GO/KEGG 富集 → GSEA——包装成一场对话：把数据文件交给 agent，回答几个问题（哪些列是什么、比较哪些组），插件就会自动准备好一切，逐步执行并展示每一步的摘要和图形，最后给出解读报告。
 
-不需要会 R、不需要 Docker、不需要碰终端：插件会在第一次使用时自动检测或静默安装自己的 R 4.4.0 运行时和包库（一次性，约 10–20 分钟）。
+不需要会 R、不需要碰终端：插件会在第一次使用时自动检测或静默安装自己的 R 4.4.0 运行时和包库（一次性，约 10–20 分钟）。
 
 ## 安装
 
@@ -13,13 +13,13 @@
 需要 [`dsh`](https://github.com/deepseek-ai/deepseek-harness) 命令行工具（Windows / macOS / Linux 通用），一条命令：
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add dsh-ezprot-plugin
+npx @deepseek-ai/dsh plugin --profile web add dsh-ezprot-plugin@0.1.1
 ```
 
 已全局安装 `dsh` 时，去掉 `npx @deepseek-ai/` 前缀即可：
 
 ```bash
-dsh plugin --profile web add dsh-ezprot-plugin
+dsh plugin --profile web add dsh-ezprot-plugin@0.1.1
 ```
 
 然后重启 `dsh web`。每个会话的 agent 都会获得 `proteomics_*` 工具。

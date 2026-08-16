@@ -4,7 +4,7 @@
 
 A plug-and-play **proteomics analysis plugin for DeepSeek Harness**. It wraps a full protein-expression analysis workflow — normalization → PCA → batch correction → differential analysis → GO/KEGG enrichment → GSEA — behind a conversation: give the agent your data file, answer a few questions (which columns are what, which groups to compare), and the plugin prepares everything automatically and walks through every step with visible summaries and figures, ending with an interpretation report.
 
-No R, no Docker, no terminal knowledge required: the plugin detects or silently installs its own R 4.4.0 runtime and package library on first use (one-time, ~10–20 min).
+No R or terminal knowledge required: the plugin detects or silently installs its own R 4.4.0 runtime and package library on first use (one-time, ~10–20 min). 
 
 ## Install
 
@@ -13,13 +13,13 @@ Prerequisites: Node.js (bundles `npx`) and pnpm — `npm install -g pnpm`.
 Requires the [`dsh`](https://github.com/deepseek-ai/deepseek-harness) CLI (Windows / macOS / Linux), one command:
 
 ```bash
-npx @deepseek-ai/dsh plugin --profile web add dsh-ezprot-plugin
+npx @deepseek-ai/dsh plugin --profile web add dsh-ezprot-plugin@0.1.1
 ```
 
 If `dsh` is already installed globally, drop the `npx @deepseek-ai/` prefix: 
 
 ```bash
-dsh plugin --profile web add dsh-ezprot-plugin
+dsh plugin --profile web add dsh-ezprot-plugin@0.1.1
 ```
 
 Then restart `dsh web`. Every session's agent gains the `proteomics_*` tools.
