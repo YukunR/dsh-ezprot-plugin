@@ -4,9 +4,25 @@
 
 A plug-and-play **proteomics analysis plugin for DeepSeek Harness**. It wraps a full protein-expression analysis workflow — normalization → PCA → batch correction → differential analysis → GO/KEGG enrichment → GSEA — behind a conversation: give the agent your data file, answer a few questions (which columns are what, which groups to compare), and the plugin prepares everything automatically and walks through every step with visible summaries and figures, ending with an interpretation report.
 
-No R or terminal knowledge required: the plugin detects or silently installs its own R 4.4.0 runtime and package library on first use (one-time, ~10–20 min). 
+No R or terminal knowledge required: the plugin detects or silently installs its own R 4.4.0 runtime and package library on first use (one-time, ~10–20 min). Docker is optional: the plugin switches to a Docker backend automatically when a usable local R cannot be set up, and can run the one-time GO/KEGG background build inside the image on network-restricted machines.
 
 ## Install
+
+### From the DSH Desktop plugin market
+
+DSH Desktop ships an in-app plugin market. Add our catalog source once, then
+install from the UI:
+
+1. Settings → Plugins → Plugin market → Sources → **Add standard source**.
+2. Enter `https://dsh-plugin.yukunr.top/catalog-source.json`.
+3. Open **Discover**, search `ezprot`, and install `dsh-ezprot-plugin` from
+   the card — Desktop re-verifies the exact version and the active profile
+   before installing.
+4. Restart Desktop and start a session: the `proteomics_*` tools are ready.
+
+A step-by-step guide with screenshots: [安装指南 (中文)](docs/install.zh.md).
+
+### From the command line
 
 Prerequisites: Node.js (bundles `npx`) and pnpm — `npm install -g pnpm`.
 
