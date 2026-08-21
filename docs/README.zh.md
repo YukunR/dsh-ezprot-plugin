@@ -10,7 +10,7 @@
 
 ### 通过 DSH Desktop 插件市场安装
 
-DSH Desktop 自带插件市场。添加一次我们的目录来源后即可在界面中安装：
+[DSH Desktop](https://github.com/anywhere-labs/deepseek-harness-desktop#dsh-desktop) 自带插件市场。添加一次我们的目录来源后即可在界面中安装：
 
 1. 设置 → 插件 → 插件市场 → 来源 → **添加标准来源**；
 2. 填入 `https://dsh-plugin.yukunr.top/catalog-source.json`；

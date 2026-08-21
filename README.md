@@ -10,7 +10,7 @@ No R or terminal knowledge required: the plugin detects or silently installs its
 
 ### From the DSH Desktop plugin market
 
-DSH Desktop ships an in-app plugin market. Add our catalog source once, then
+[DSH Desktop](https://github.com/anywhere-labs/deepseek-harness-desktop#dsh-desktop) ships an in-app plugin market. Add our catalog source once, then
 install from the UI:
 
 1. Settings → Plugins → Plugin market → Sources → **Add standard source**.
