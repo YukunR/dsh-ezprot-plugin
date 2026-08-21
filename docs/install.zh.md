@@ -2,7 +2,7 @@
 
 [English install summary](../README.md#install) | 中文
 
-本文演示如何在 **DSH Desktop** 中通过内置插件市场安装 `dsh-ezprot-plugin`。
+本文演示如何在 [DSH Desktop](https://github.com/anywhere-labs/deepseek-harness-desktop#dsh-desktop) 中通过内置插件市场安装 `dsh-ezprot-plugin`。
 全部操作都在图形界面完成，不需要碰终端。
 
 ## 前置条件
